@@ -13,13 +13,18 @@
   body { margin:0; font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
   main { max-width: 900px; margin: 0 auto; padding: 24px 16px 64px; }
   h1 { margin: 0 0 4px; } h2 { margin: 32px 0 12px; } h3 { margin: 0 0 8px; }
+  a { color: var(--accent); }
+  code { background:var(--bg); padding:1px 5px; border-radius:4px; font-size:.85em; }
   .sub, .muted { color: var(--muted); font-size: .9rem; }
   .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; margin-top:16px; }
+  .card.notice { border-left:4px solid var(--err); }
   label { display:block; font-weight:600; margin-bottom:12px; }
   label.inline { font-weight:400; display:flex; gap:8px; align-items:flex-start; }
-  input[type=text], textarea { width:100%; padding:10px; margin-top:4px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font:inherit; }
+  input[type=text], input[type=number], textarea { width:100%; padding:10px; margin-top:4px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font:inherit; }
   .row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
   .row label { flex:1 1 220px; margin-bottom:0; }
+  .row.compact { margin-top:16px; }
+  .row.compact label { flex:1 1 150px; }
   button { padding:10px 16px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
   @media (prefers-color-scheme: dark) { button { color:#06210f; } }
   button.secondary { background:transparent; color:var(--text); border:1px solid var(--border); }
@@ -29,14 +34,21 @@
   .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
   .cards .card { margin-top:0; }
   .num { font-size:1.9rem; font-weight:800; color:var(--accent); }
-  table { width:100%; border-collapse:collapse; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; }
   td, th { padding:8px 6px; border-top:1px solid var(--border); text-align:left; vertical-align:top; }
   th { font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; border-top:0; }
-  td.price { text-align:right; white-space:nowrap; font-weight:700; }
+  td.price, th.price { text-align:right; }
+  td.price { white-space:nowrap; font-weight:700; }
   td.thumb { width:52px; } td.thumb img { width:44px; height:44px; object-fit:contain; border-radius:6px; background:#fff; }
   tr.best td { background:var(--accent-bg); }
   .tag { display:inline-block; margin-top:2px; padding:1px 8px; border-radius:99px; background:var(--accent-bg); color:var(--accent); font-size:.75rem; }
+  .tag.est { background:transparent; border:1px dashed var(--border); color:var(--muted); }
+  .pu { font-weight:600; font-size:.82rem; color:var(--text); }
   .warn { color:var(--err); }
+  .est { color:var(--muted); font-style:italic; }
+  details.card > summary { cursor:pointer; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; }
+  .sum-total { margin-left:auto; font-weight:800; color:var(--accent); }
+  ol.route { margin:8px 0; padding-left:22px; } ol.route li { margin-bottom:10px; }
   footer { margin-top:40px; font-size:.8rem; color:var(--muted); }
 </style>
 </head>
@@ -52,12 +64,31 @@
       </label>
       <button id="locate" type="button" class="secondary">📍 Use my location</button>
     </div>
+
     <label style="margin-top:16px">Shopping list (one item per line)
       <textarea id="list" rows="8" placeholder="milk&#10;eggs&#10;chicken breast&#10;bananas"></textarea>
     </label>
-    <label class="inline">
+    <p class="muted" style="margin:-4px 0 14px">
+      Optional extras after a <code>|</code>: <code>milk | 2 L | $4.99</code> means "compare per 2 L, and my usual shelf price is $4.99"
+      (used for stores with no flyer deal on it). Either part can be left out.
+    </p>
+
+    <div class="row compact">
+      <label><span id="lblFuel">Gas price</span>
+        <input type="number" id="fuel" step="0.01" min="0"></label>
+      <label><span id="lblEff">Fuel economy</span>
+        <input type="number" id="eff" step="0.1" min="1"></label>
+      <label><span id="lblRadius">Search radius</span>
+        <input type="number" id="radius" step="1" min="1" max="40"></label>
+    </div>
+
+    <label class="inline" style="margin-top:16px">
       <input type="checkbox" id="strict" checked>
       <span>Strict matching: the product name must contain every word you typed (filters out things like "milk chocolate" when you search "milk")</span>
+    </label>
+    <label class="inline">
+      <input type="checkbox" id="lookup" checked>
+      <span>Look up package sizes in each flyer item's details when the name doesn't say (more requests, slower, but gives more per-gram / per-mL prices)</span>
     </label>
     <button id="go" type="button">Find the cheapest</button>
     <div id="status" role="status"></div>
@@ -68,7 +99,8 @@
 
   <footer>
     Unofficial; not affiliated with Flipp. Prices come from weekly flyers and can vary by store, so
-    check size/unit and any conditions (loyalty card, limits) before you go.
+    check size/unit and any conditions (loyalty card, limits) before you go. Prices marked "est." are estimates, not shelf prices.
+    Store locations © OpenStreetMap contributors (Overpass API); driving distances from the public OSRM demo server, with a straight-line estimate as fallback.
   </footer>
 </main>
 
@@ -79,30 +111,69 @@
   const BASES = ['https://backflipp.wishabi.com/flipp', '/flipp'];
   let baseIdx = 0;
 
+  const KM_PER_MI = 1.609344;
+  const ASSUMED_MARKUP = 1.2;     // regular ≈ 1.2 × typical flyer price, ONLY when flyers publish no "was" price
+  const MAX_CHAINS = 8;           // chains considered by the route search (2^8 combinations)
+  const LOCS_PER_CHAIN = 3;       // nearest branches kept per chain
+  const MAX_MERCHANTS = 15;       // chains looked up on OpenStreetMap
+  const LOOKUPS_PER_ITEM = 5;     // item-detail requests per search term (size look-up)
+  const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+
+  const DEFAULTS = {   // placeholders: set your real gas price / car
+    us: { fuel:3.50, eff:25, radius:10, lFuel:'Gas price ($ / gallon)', lEff:'Fuel economy (mpg)',        lRadius:'Search radius (miles)' },
+    ca: { fuel:1.65, eff:9,  radius:15, lFuel:'Gas price ($ / litre)',  lEff:'Fuel use (L / 100 km)',     lRadius:'Search radius (km)' }
+  };
+
   const $ = id => document.getElementById(id);
-  const els = { postal:$('postal'), list:$('list'), strict:$('strict'), go:$('go'),
-                locate:$('locate'), status:$('status'), summary:$('summary'), details:$('details') };
+  const els = { postal:$('postal'), list:$('list'), strict:$('strict'), lookup:$('lookup'), go:$('go'),
+                locate:$('locate'), status:$('status'), summary:$('summary'), details:$('details'),
+                fuel:$('fuel'), eff:$('eff'), radius:$('radius') };
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
-  let money = n => '$' + n.toFixed(2);
+  let money  = n => '$' + n.toFixed(2);
+  let moneyP = n => '$' + n.toFixed(4);                   // precise, for per-g / per-mL prices
+  let fmtDist = km => km.toFixed(1) + ' km';
+
+  const median = a => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const timeoutSignal = ms => (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) ? AbortSignal.timeout(ms) : undefined;
 
   // ---------- persistence ----------
   els.postal.value = localStorage.getItem('fp.postal') || '';
   els.list.value   = localStorage.getItem('fp.list')   || '';
+  let saved = {}; try { saved = JSON.parse(localStorage.getItem('fp.settings') || '{}'); } catch {}
 
   function setStatus(msg, isError = false) {
     els.status.textContent = msg;
     els.status.className = isError ? 'error' : '';
   }
 
-  // ---------- location ----------
+  // ---------- location / country-specific settings ----------
   function parsePostal(raw) {
     const p = raw.trim().toUpperCase();
-    if (/^\d{5}(-\d{4})?$/.test(p))       return { postal:p.slice(0,5),        locale:'en-us', intl:'en-US', currency:'USD' };
-    if (/^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/.test(p)) return { postal:p.replace(/\s/g,''), locale:'en-ca', intl:'en-CA', currency:'CAD' };
+    if (/^\d{5}(-\d{4})?$/.test(p))       return { postal:p.slice(0,5),        locale:'en-us', intl:'en-US', currency:'USD', country:'us' };
+    if (/^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/.test(p)) return { postal:p.replace(/\s/g,''), locale:'en-ca', intl:'en-CA', currency:'CAD', country:'ca' };
     return null;
   }
+
+  const num = (el, d) => { const v = parseFloat(el.value); return Number.isFinite(v) && v > 0 ? v : d; };
+  let country = null;
+  const readRaw = () => ({ fuel:num(els.fuel, DEFAULTS[country].fuel), eff:num(els.eff, DEFAULTS[country].eff), radius:num(els.radius, DEFAULTS[country].radius) });
+  function applyCountry(c) {
+    if (c === country) return;
+    if (country) saved[country] = readRaw();
+    country = c;
+    const d = DEFAULTS[c], s = { ...d, ...(saved[c] || {}) };
+    els.fuel.value = s.fuel; els.eff.value = s.eff; els.radius.value = s.radius;
+    $('lblFuel').textContent = d.lFuel; $('lblEff').textContent = d.lEff; $('lblRadius').textContent = d.lRadius;
+  }
+  applyCountry((parsePostal(els.postal.value) || { country:'us' }).country);
+
+  els.postal.addEventListener('input', () => {
+    delete els.postal.dataset.lat; delete els.postal.dataset.lon;   // typed postal code overrides GPS fix
+    const p = parsePostal(els.postal.value);
+    if (p) applyCountry(p.country);
+  });
 
   els.locate.addEventListener('click', () => {
     if (!navigator.geolocation) return setStatus('Geolocation isn’t available in this browser.', true);
@@ -114,6 +185,8 @@
         const pc = (await r.json())?.address?.postcode;
         if (!pc) throw new Error('no postcode');
         els.postal.value = pc;
+        els.postal.dataset.lat = lat; els.postal.dataset.lon = lon;   // use exact position for distances
+        const p = parsePostal(pc); if (p) applyCountry(p.country);
         setStatus(`Using ${pc}.`);
       } catch {
         setStatus('Couldn’t work out your postal code. Please type it in.', true);
@@ -142,25 +215,97 @@
     throw lastErr;
   }
 
+  // ---------- size / unit-price parsing ----------
+  // Everything is converted to grams ("g") or millilitres ("ml") so offers can be compared.
+  const NUM  = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
+  const UNIT = String.raw`fl\.?\s*oz|kg|mg|lbs?|oz|ml|cl|gal|qt|pt|litres?|liters?|g|l`;
+  const UNITS = {
+    mg:['g',.001], g:['g',1], kg:['g',1000], lb:['g',453.592], lbs:['g',453.592], oz:['g',28.3495],
+    ml:['ml',1], cl:['ml',10], l:['ml',1000], litre:['ml',1000], litres:['ml',1000], liter:['ml',1000], liters:['ml',1000],
+    'fl oz':['ml',29.5735], floz:['ml',29.5735], gal:['ml',3785.41], qt:['ml',946.353], pt:['ml',473.176]
+  };
+  // plain "oz" is weight unless the product looks like a drink (heuristic)
+  const LIQUID = /\b(milk|juice|soda|cola|beer|wine|lemonade|vinegar|kombucha|cider)\b/i;
+  const SOLID  = /\b(chocolate|cookies?|bars?|powder|cereal|candy|crackers?|chips|mix)\b/i;
+
+  const reRange  = new RegExp(String.raw`${NUM}\s*(?:-|–|to)\s*${NUM}\s*(?:${UNIT})\b`, 'gi');   // "1-2 lb": ambiguous, ignored
+  const reMulti1 = new RegExp(String.raw`(\d+)\s*[x×]\s*${NUM}\s*(${UNIT})\b`, 'i');             // 12 x 355 mL
+  const reMulti2 = new RegExp(String.raw`${NUM}\s*(${UNIT})\s*[x×]\s*(\d+)\b`, 'i');             // 355 mL x 12
+  const reMulti3 = new RegExp(String.raw`(\d+)\s*(?:pk|pack|ct|count|pcs?)\.?\s*(?:of\s*)?${NUM}\s*(${UNIT})\b`, 'i'); // 12 pk 355 mL
+  const reSingle = new RegExp(String.raw`${NUM}\s*(${UNIT})\b`, 'i');
+  const reRate1  = new RegExp(String.raw`^\s*\$?\s*(?:/|per\s+)\s*${NUM}?\s*(${UNIT})\b`, 'i');   // "/lb", "per 100 g"
+  const reRate2  = new RegExp(String.raw`^\s*(${UNIT})\b`, 'i');                                   // "lb"
+
+  function baseUnit(raw, ctx) {
+    const k = raw.toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ');
+    if (k === 'oz' && LIQUID.test(ctx) && !SOLID.test(ctx)) return UNITS['fl oz'];
+    return UNITS[k];
+  }
+  const cleanNums = t => t.replace(/(\d),(\d{3})(?!\d)/g, '$1$2').replace(/(\d),(\d{1,2})(?!\d)/g, '$1.$2');
+
+  function parseSize(text, ctx = text) {          // → { basis:'g'|'ml', amount } for the WHOLE package
+    if (!text) return null;
+    const t = cleanNums(String(text)).replace(reRange, ' ');
+    let m, n, amt, unit;
+    if      ((m = reMulti1.exec(t))) { n = +m[1]; amt = +m[2]; unit = m[3]; }
+    else if ((m = reMulti2.exec(t))) { amt = +m[1]; unit = m[2]; n = +m[3]; }
+    else if ((m = reMulti3.exec(t))) { n = +m[1]; amt = +m[2]; unit = m[3]; }
+    else if ((m = reSingle.exec(t))) { n = 1; amt = +m[1]; unit = m[2]; }
+    else return null;
+    const u = baseUnit(unit, ctx);
+    if (!u || !(amt > 0) || n > 100) return null;
+    return { basis:u[0], amount:n * amt * u[1] };
+  }
+
+  function parseRate(text, ctx) {                  // "/lb", "per 100 g" → price is per this much
+    if (!text) return null;
+    const t = String(text);
+    let m, qty = 1, unit;
+    if ((m = reRate1.exec(t))) { qty = m[1] ? +m[1] : 1; unit = m[2]; }
+    else if ((m = reRate2.exec(t))) { unit = m[1]; }
+    else return null;
+    const u = baseUnit(unit, ctx);
+    return u && qty > 0 ? { basis:u[0], amount:qty * u[1] } : null;
+  }
+
+  function applySize(o) {
+    o.rate = o.size = o.basis = o.perBase = null;
+    if (o.unit == null) return o;
+    const ctx = `${o.name} ${o.desc}`;
+    const rate = parseRate(o.post, ctx);
+    if (rate) { o.rate = rate; o.basis = rate.basis; o.perBase = o.unit / rate.amount; return o; }
+    for (const t of [o.sizeHint, o.name, o.desc, o.post]) {
+      const s = parseSize(t, ctx);
+      if (s) { o.size = s; o.basis = s.basis; o.perBase = o.unit / s.amount; o.sizeFrom = (t === o.name ? 'name' : 'details'); break; }
+    }
+    return o;
+  }
+
   function normalize(raw) {
     const price = parseFloat(raw.current_price);
+    const orig  = parseFloat(raw.original_price);
     const pre = (raw.pre_price_text || '').trim();
     // "2/" or "2 for" in the pre-price text => multi-buy; price is for the bundle
     const m = /^(\d+)\s*(?:\/|for)$/i.exec(pre);
     const qty = m ? Math.max(1, +m[1]) : 1;
     const img = raw.clean_image_url || raw.cutout_image_url || '';
-    return {
+    return applySize({
+      id: raw.flyer_item_id || raw.id || null,
       name: (raw.name || '').trim(),
       merchant: raw.merchant_name || raw.merchant || 'Unknown store',
       price: Number.isFinite(price) ? price : null,
+      orig: Number.isFinite(orig) && orig > 0 ? orig : null,   // "was" price, when the flyer gives one
       qty,
-      unit: Number.isFinite(price) ? price / qty : null,   // effective per-item price
+      unit: Number.isFinite(price) ? price / qty : null,       // effective per-item price
       pre: qty > 1 ? '' : pre,
       post: (raw.post_price_text || '').trim(),
       story: (raw.sale_story || '').trim(),
       validTo: raw.valid_to ? new Date(raw.valid_to) : null,
-      image: /^https:\/\//.test(img) ? img : ''
-    };
+      image: /^https:\/\//.test(img) ? img : '',
+      // field names for size info aren't documented; read the likely ones defensively
+      sizeHint: [raw.item_weight, raw.weight, raw.size].filter(Boolean).join(' '),
+      desc: String(raw.description || '')
+    });
   }
 
   const stem = w => (w.length > 3 ? w.replace(/(ies|es|s)$/, m => m === 'ies' ? 'y' : '') : w);
@@ -176,8 +321,20 @@
     return (data.items || [])
       .map(normalize)
       .filter(o => o.price > 0 && o.name && (!o.validTo || o.validTo >= now) && (!strict || matches(query, o.name)))
-      .filter(o => { const k = `${o.merchant}|${o.name}|${o.price}`; if (seen.has(k)) return false; seen.add(k); return true; })
-      .sort((a, b) => a.unit - b.unit);
+      .filter(o => { const k = `${o.merchant}|${o.name}|${o.price}`; if (seen.has(k)) return false; seen.add(k); return true; });
+  }
+
+  // For the cheapest few offers with no detectable size, ask Flipp for the item details and re-parse.
+  async function enrichSizes(offers) {
+    const need = offers.filter(o => o.perBase == null && o.id).sort((a, b) => a.unit - b.unit).slice(0, LOOKUPS_PER_ITEM);
+    await pool(need, 2, async o => {
+      try {
+        const j = await flippFetch(`/items/${encodeURIComponent(o.id)}`, '');
+        const it = j.item || j;
+        o.desc = [it.description, it.item_weight, it.weight, it.size].filter(Boolean).join(' ');
+        applySize(o);
+      } catch { /* optional: leave as "size unknown" */ }
+    });
   }
 
   async function pool(items, limit, fn) {
@@ -188,25 +345,249 @@
     return out;
   }
 
-  // ---------- analysis ----------
-  function rankStores(found) {
-    const stores = new Map();
-    for (const r of found) {
-      const best = new Map();                         // cheapest offer per store for this item
-      for (const o of r.offers) if (!best.has(o.merchant)) best.set(o.merchant, o);  // offers are pre-sorted
-      for (const [m, o] of best) {
-        if (!stores.has(m)) stores.set(m, { name:m, items:[], total:0, extra:0 });
-        const s = stores.get(m);
-        s.items.push({ query:r.query, offer:o });
-        s.total += o.unit;
-        s.extra += o.unit - r.offers[0].unit;         // premium vs. cheapest anywhere
+  // ---------- list parsing:  "milk | 2 L | $4.99" ----------
+  function parseList(text) {
+    const seen = new Set(), out = [];
+    for (const line of text.split('\n')) {
+      const [name, ...rest] = line.split('|').map(s => s.trim());
+      if (!name || seen.has(name.toLowerCase())) continue;
+      seen.add(name.toLowerCase());
+      const it = { query:name, ref:null, price:null };
+      for (const p of rest) {
+        if (/^\$\s*\d+(?:\.\d+)?$/.test(p)) it.price = parseFloat(p.replace('$', ''));
+        else { const s = parseSize(p, `${name} ${p}`); if (s) it.ref = { ...s, user:true }; }
       }
+      out.push(it);
     }
-    return [...stores.values()].sort((a, b) => b.items.length - a.items.length || a.total - b.total);
+    return out.slice(0, 40);
   }
 
-  // ---------- rendering ----------
+  // ---------- per-item comparison ----------
+  // All offers for one search term are costed for the same reference amount (median pack size,
+  // or the amount you typed) so a 4 L jug and a 1 L carton are compared fairly.
+  function chooseRef(offers, forced, loc) {
+    if (forced) return forced;
+    const sized = offers.filter(o => o.perBase != null);
+    if (!sized.length) return null;
+    const g = sized.filter(o => o.basis === 'g').length;
+    const basis = g >= sized.length - g ? 'g' : 'ml';
+    const sizes = sized.filter(o => o.basis === basis && o.size).map(o => o.size.amount);
+    if (sizes.length) return { basis, amount:median(sizes) };
+    return { basis, amount: basis === 'g' ? (loc.country === 'us' ? 453.592 : 1000) : 1000, assumed:true };  // by-weight only: 1 lb / 1 kg / 1 L
+  }
+
+  // Flyers only publish SALE prices, so the regular price is an estimate:
+  //  1) your own price, 2) median of the flyers' "was" prices, 3) typical flyer price × ASSUMED_MARKUP.
+  function estimateRegular(offers, userPrice) {
+    if (userPrice != null) return { cost:userPrice, source:'you' };
+    if (!offers.length) return null;
+    const was = offers.filter(o => o.orig && o.qty === 1 && o.orig > o.price).map(o => o.cost * o.orig / o.price);
+    if (was.length) return { cost:median(was), source:'was' };
+    return { cost:median(offers.map(o => o.cost)) * ASSUMED_MARKUP, source:'assumed' };
+  }
+
+  async function processQuery(it, loc, opts) {
+    const offers = await findOffers(it.query, loc, opts.strict);
+    if (opts.lookup && offers.length) await enrichSizes(offers);
+    const ref = chooseRef(offers, it.ref, loc);
+    for (const o of offers) {
+      o.exact = !!(ref && o.perBase != null && o.basis === ref.basis);
+      o.cost  = o.exact ? o.perBase * ref.amount : o.unit;      // cost for the reference amount
+    }
+    offers.sort((a, b) => a.cost - b.cost);
+    const byStore = new Map();
+    for (const o of offers) if (!byStore.has(o.merchant)) byStore.set(o.merchant, o);   // cheapest per store
+    return { query:it.query, ref, offers, byStore, regular:estimateRegular(offers, it.price) };
+  }
+
+  // What would this item cost at this store? Sale price if the flyer has a deal, else the estimated regular price.
+  function itemAt(r, store) {
+    r.at ||= new Map();
+    if (r.at.has(store)) return r.at.get(store);
+    const o = r.byStore.get(store);
+    let a = null;
+    if (o && (!r.regular || o.cost <= r.regular.cost + 1e-9)) a = { kind:'sale', cost:o.cost, offer:o };
+    else if (r.regular) a = { kind:'regular', cost:r.regular.cost, src:r.regular.source, over:o || null };
+    r.at.set(store, a);
+    return a;
+  }
+
+  // ---------- geography ----------
+  const hav = (a, b) => {
+    const R = 6371, rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
+    const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(x));
+  };
+  const norm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+  async function getHome(loc) {
+    const d = els.postal.dataset;
+    if (d.lat && d.lon) return { lat:+d.lat, lon:+d.lon };
+    const tries = loc.country === 'ca' ? [`${loc.postal.slice(0, 3)} ${loc.postal.slice(3)}`, loc.postal.slice(0, 3)] : [loc.postal];
+    for (const pc of tries) {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=${loc.country}&postalcode=${encodeURIComponent(pc)}`);
+      const j = await r.json();
+      if (j[0]) return { lat:+j[0].lat, lon:+j[0].lon };
+    }
+    return null;
+  }
+
+  async function overpass(names, home, radiusKm) {
+    const pat = names.map(n => n.replace(/[^A-Za-z0-9\u00C0-\u024F]+/g, '.?')).join('|');   // punctuation → optional wildcard
+    const around = `(around:${Math.round(radiusKm * 1000)},${home.lat.toFixed(5)},${home.lon.toFixed(5)})`;
+    const stmts = [];
+    for (const key of ['name', 'brand']) for (const kind of ['["shop"]', '["amenity"="pharmacy"]'])
+      stmts.push(`nwr${kind}["${key}"~"^(${pat})",i]${around};`);
+    const body = 'data=' + encodeURIComponent(`[out:json][timeout:25];(${stmts.join('')});out center tags;`);
+    let lastErr;
+    for (const url of OVERPASS) {
+      try {
+        const r = await fetch(url, { method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded' }, body, signal:timeoutSignal(30000) });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        return (j.elements || [])
+          .map(e => ({ lat:e.lat ?? e.center?.lat, lon:e.lon ?? e.center?.lon, tags:e.tags || {} }))
+          .filter(e => Number.isFinite(e.lat) && Number.isFinite(e.lon));
+      } catch (e) { lastErr = e; }
+    }
+    throw new Error('Store-location lookup (OpenStreetMap) failed: ' + (lastErr?.message || 'unknown error'));
+  }
+
+  async function roadMatrix(points) {      // driving km between every pair; falls back to straight-line × 1.3
+    try {
+      const coords = points.map(p => `${p.lon.toFixed(6)},${p.lat.toFixed(6)}`).join(';');
+      const r = await fetch(`https://router.project-osrm.org/table/v1/driving/${coords}?annotations=distance`, { signal:timeoutSignal(20000) });
+      const j = await r.json();
+      if (j.code === 'Ok' && Array.isArray(j.distances) && j.distances.every(row => row.every(Number.isFinite)))
+        return { D:j.distances.map(row => row.map(m => m / 1000)), road:true };
+    } catch { /* fall through */ }
+    return { D:points.map(a => points.map(b => hav(a, b) * 1.3)), road:false };
+  }
+
+  const locLabel = e => {
+    const t = e.tags, street = [t['addr:housenumber'], t['addr:street']].filter(Boolean).join(' ');
+    return [street, t['addr:city']].filter(Boolean).join(', ') || t.name || `${e.lat.toFixed(4)}, ${e.lon.toFixed(4)}`;
+  };
+
+  function rankMerchants(results) {
+    const m = new Map();
+    for (const r of results) for (const [name, o] of r.byStore) {
+      const s = m.get(name) || { name, count:0, value:0 };
+      s.count++; if (r.regular) s.value += Math.max(0, r.regular.cost - o.cost);
+      m.set(name, s);
+    }
+    return [...m.values()].sort((a, b) => b.value - a.value || b.count - a.count);
+  }
+
+  async function locateStores(home, merchants, radiusKm) {
+    if (!home) throw new Error('Couldn’t work out where that postal code is, so distances and routes are unavailable.');
+    const found = await overpass(merchants.map(m => m.name), home, radiusKm);
+    const mn = merchants.map(m => ({ m, n:norm(m.name) }));
+    const by = new Map();
+    for (const e of found) {                        // each OSM shop → the longest-named chain it matches
+      const cands = [norm(e.tags.name), norm(e.tags.brand)].filter(Boolean);
+      let best = null;
+      for (const x of mn) if (cands.some(c => c === x.n || c.startsWith(x.n + ' ')) && (!best || x.n.length > best.n.length)) best = x;
+      if (best) { if (!by.has(best.m.name)) by.set(best.m.name, []); by.get(best.m.name).push(e); }
+    }
+    const chains = [];
+    for (const m of merchants) {
+      const locs = (by.get(m.name) || [])
+        .map(e => ({ ...e, chain:m.name, label:locLabel(e), d:hav(home, e) }))
+        .sort((a, b) => a.d - b.d).slice(0, LOCS_PER_CHAIN);
+      if (locs.length) chains.push({ name:m.name, value:m.value, locs });
+    }
+    const flat = chains.flatMap(c => c.locs);
+    flat.forEach((l, i) => { l.idx = i + 1; });                 // node 0 is home
+    const { D, road } = await roadMatrix([home, ...flat]);
+    for (const c of chains) { c.locs.forEach(l => { l.dist = D[0][l.idx]; }); c.locs.sort((a, b) => a.dist - b.dist); }
+    return { home, chains, D, road };
+  }
+
+  // ---------- route planning ----------
+  // Visit the given nodes (round trip from home = node 0) in the order that minimises distance (exact, with pruning).
+  function bestOrder(nodes, D) {
+    let best = { order:[], dist:Infinity };
+    const used = Array(nodes.length).fill(false), cur = [];
+    (function rec(last, d) {
+      if (d >= best.dist) return;
+      if (cur.length === nodes.length) {
+        const t = d + D[last][0];
+        if (t < best.dist) best = { order:cur.slice(), dist:t };
+        return;
+      }
+      for (let i = 0; i < nodes.length; i++) if (!used[i]) {
+        used[i] = true; cur.push(nodes[i]);
+        rec(nodes[i], d + D[last][nodes[i]]);
+        cur.pop(); used[i] = false;
+      }
+    })(0, 0);
+    return best;
+  }
+
+  function evaluate(S, sel, picks) {
+    const route = bestOrder(picks.map(p => p.idx), S.geo.D);
+    const groceries = S.priced.reduce((s, r) => s + Math.min(...sel.map(c => itemAt(r, c.name).cost)), 0);
+    const gas = route.dist * S.gasKm;
+    return { sel, picks, route, groceries, gas, dist:route.dist, total:groceries + gas };
+  }
+
+  // Try the other nearby branches of each chosen chain; keep any swap that shortens the trip.
+  function refine(S, plan) {
+    let { picks, route } = plan;
+    for (let pass = 0; pass < 3; pass++) {
+      let improved = false;
+      for (let i = 0; i < picks.length; i++) for (const alt of plan.sel[i].locs) {
+        if (alt === picks[i]) continue;
+        const trial = picks.slice(); trial[i] = alt;
+        const r = bestOrder(trial.map(p => p.idx), S.geo.D);
+        if (r.dist < route.dist - 1e-6) { picks = trial; route = r; improved = true; }
+      }
+      if (!improved) break;
+    }
+    const gas = route.dist * S.gasKm;
+    return { ...plan, picks, route, gas, dist:route.dist, total:plan.groceries + gas };
+  }
+
+  function buildPlans(S) {
+    const cands = S.geo.chains.slice(0, MAX_CHAINS), all = [];
+    for (let mask = 1; mask < (1 << cands.length); mask++) {
+      const sel = cands.filter((_, i) => mask & (1 << i));
+      all.push(evaluate(S, sel, sel.map(c => c.locs[0])));
+    }
+    const best = [...all].sort((a, b) => a.total - b.total)[0];
+    const minG = Math.min(...all.map(p => p.groceries));
+    const maxSave = all.filter(p => p.groceries <= minG + 0.005).sort((a, b) => a.dist - b.dist)[0];
+    const nearest = all.filter(p => p.sel.length === 1).sort((a, b) => a.dist - b.dist)[0];
+    return { best:refine(S, best), maxSave:refine(S, maxSave), nearest };
+  }
+
+  const orderedStops = p => p.route.order.map(id => p.picks.find(x => x.idx === id));
+  const planKey = p => p.sel.map(c => c.name).sort().join('|');
+
+  function legs(S, p) {
+    const ids = [0, ...p.route.order, 0];
+    return ids.slice(1).map((id, i) => S.geo.D[ids[i]][id]);
+  }
+
+  function assignItems(S, p) {                       // where to buy each item on this route
+    const stops = orderedStops(p), buckets = stops.map(stop => ({ stop, items:[] }));
+    for (const r of S.priced) {
+      let bi = 0, bc = Infinity;
+      stops.forEach((s, i) => { const c = itemAt(r, s.chain).cost; if (c < bc - 1e-9) { bc = c; bi = i; } });
+      buckets[bi].items.push({ r, a:itemAt(r, stops[bi].chain) });
+    }
+    return buckets;
+  }
+
+  // ---------- rendering helpers ----------
   const fmtDate = d => d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+  const fmtAmount = (basis, a) => {
+    const big = a >= 1000, v = big ? a / 1000 : a;
+    return `${+v.toPrecision(3)} ${basis === 'g' ? (big ? 'kg' : 'g') : (big ? 'L' : 'mL')}`;
+  };
+  const refLabel = ref => ref ? `${ref.user ? '' : '≈ '}${fmtAmount(ref.basis, ref.amount)}` : '';
+  const SRC = { was:'median of the flyers’ “was” prices', assumed:`assumed ${Math.round((ASSUMED_MARKUP - 1) * 100)}% above typical flyer price (no “was” prices published)`, you:'your price' };
 
   function priceLabel(o) {
     let s = o.qty > 1
@@ -215,18 +596,135 @@
     return s.trim();
   }
 
-  function offerRow(o, best) {
+  function perUnitHtml(o) {
+    if (o.perBase == null) return `<div class="muted">size unknown – compared by package price</div>`;
+    const b = o.basis === 'g' ? 'g' : 'mL';
+    return `<div class="pu">${moneyP(o.perBase * 100)} / 100 ${b}</div><div class="muted">${moneyP(o.perBase)} / ${b}</div>`;
+  }
+
+  function estUnitHtml(ref, cost) {                  // per-100 g/mL for an estimated regular price
+    if (!ref) return '';
+    const b = ref.basis === 'g' ? 'g' : 'mL';
+    return `<div class="muted">≈ ${moneyP(cost / ref.amount * 100)} / 100 ${b}</div>`;
+  }
+
+  function offerRow(o, best, r) {
+    const size = o.size ? `Size ${fmtAmount(o.size.basis, o.size.amount)} <span class="muted">(from ${o.sizeFrom})</span>` : o.rate ? 'Sold by weight/volume' : '';
+    const norm$ = (o.exact && r.ref && Math.abs(o.cost - o.unit) > 0.005) ? `<div class="muted">≈ ${money(o.cost)} for ${refLabel(r.ref)}</div>` : '';
     return `<tr class="${best ? 'best' : ''}">
       <td class="thumb">${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</td>
       <td><strong>${esc(o.merchant)}</strong>
           <div class="muted">${esc(o.name)}</div>
+          ${size ? `<div class="muted">${size}</div>` : ''}
           ${o.story ? `<span class="tag">${esc(o.story)}</span>` : ''}</td>
       <td class="price">${priceLabel(o)}
+          ${perUnitHtml(o)}${norm$}
           <div class="muted">${o.validTo ? 'thru ' + fmtDate(o.validTo) : ''}</div></td>
     </tr>`;
   }
 
-  function render(results, total) {
+  const ll = p => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+  const mapsLink = p => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ll(p))}`;
+  function routeLink(S, p) {
+    const stops = orderedStops(p);
+    return 'https://www.google.com/maps/dir/?api=1&travelmode=driving'
+      + `&origin=${encodeURIComponent(ll(S.geo.home))}&destination=${encodeURIComponent(ll(S.geo.home))}`
+      + `&waypoints=${encodeURIComponent(stops.map(ll).join('|'))}`;
+  }
+
+  function summarizeStores(S) {
+    const names = new Set();
+    for (const r of S.priced) for (const m of r.byStore.keys()) names.add(m);
+    const D = S.geo?.D;
+    const out = [...names].map(name => {
+      let sale = 0, saleN = 0, reg = 0, regN = 0;
+      const lines = S.priced.map(r => {
+        const a = itemAt(r, name);
+        if (a.kind === 'sale') { sale += a.cost; saleN++; } else { reg += a.cost; regN++; }
+        return { r, a };
+      });
+      const chain = S.geo?.chains.find(c => c.name === name) || null;
+      const near = chain ? chain.locs[0] : null;
+      const tripKm = near ? D[0][near.idx] + D[near.idx][0] : null;
+      return { name, lines, sale, saleN, reg, regN, total:sale + reg, near, tripKm, tripGas:tripKm != null ? tripKm * S.gasKm : null };
+    }).filter(s => s.saleN > 0);
+    const key = s => s.total + (S.geo ? (s.tripGas ?? Infinity) : 0);
+    return out.sort((a, b) => key(a) - key(b));
+  }
+
+  function storeCard(s, S) {
+    const n = S.priced.length;
+    const rows = s.lines.map(({ r, a }) => {
+      const rl = r.ref ? `<div class="muted">per ${refLabel(r.ref)}</div>` : '';
+      if (a.kind === 'sale') {
+        const o = a.offer;
+        return `<tr><td>${esc(r.query)}${rl}<div class="muted">${esc(o.name)}</div></td>
+          <td class="price">${priceLabel(o)}${perUnitHtml(o)}</td>
+          <td class="price">${money(a.cost)}<div><span class="tag">on sale</span></div></td></tr>`;
+      }
+      const why = a.over ? `flyer price (${money(a.over.cost)}) is above est. regular` : 'no flyer offer found';
+      return `<tr><td>${esc(r.query)}${rl}<div class="muted">${why}</div></td>
+        <td class="price muted">—</td>
+        <td class="price est">≈ ${money(a.cost)}${estUnitHtml(r.ref, a.cost)}<div><span class="tag est">est. regular</span></div></td></tr>`;
+    }).join('');
+    return `<details class="card">
+      <summary>
+        <strong>${esc(s.name)}</strong>
+        <span class="muted">${s.near ? fmtDist(s.near.dist) + ' away' : 'location not found'} · ${s.saleN} of ${n} on sale</span>
+        <span class="sum-total">${money(s.total)}</span>
+      </summary>
+      ${s.near ? `<div class="muted" style="margin-top:6px">${esc(s.near.label)} · <a href="${mapsLink(s.near)}" target="_blank" rel="noopener">map</a>
+        · round trip ${fmtDist(s.tripKm)} ≈ ${money(s.tripGas)} gas → <strong>${money(s.total + s.tripGas)}</strong> all-in</div>` : ''}
+      <table><tr><th>Item</th><th class="price">Flyer price</th><th class="price">Cost here</th></tr>${rows}</table>
+      <p class="muted">On sale: ${money(s.sale)} (${s.saleN} item${s.saleN === 1 ? '' : 's'}) ·
+        Not on sale, est. regular: ${money(s.reg)} (${s.regN} item${s.regN === 1 ? '' : 's'}) ·
+        <strong>Basket: ${money(s.total)}</strong></p>
+    </details>`;
+  }
+
+  function planCard(title, p, base, S) {
+    const stops = orderedStops(p).map(s => esc(s.chain)).join(' → ');
+    const delta = base ? base.total - p.total : 0;
+    const cmp = !base || p === base ? '' :
+      delta > 0.005 ? `<div><strong>Saves ${money(delta)}</strong> vs. only the nearest store</div>` :
+      delta < -0.005 ? `<div class="muted">${money(-delta)} more than only the nearest store</div>` :
+      `<div class="muted">Same cost as only the nearest store</div>`;
+    return `<div class="card">
+      <h3>${title}</h3>
+      <div class="num">${money(p.total)}</div>
+      <div class="muted">groceries + gas</div>
+      <div style="margin:6px 0"><strong>Home → ${stops} → Home</strong></div>
+      <div>Groceries ${money(p.groceries)} · Gas ${money(p.gas)} (${fmtDist(p.dist)} round trip)</div>
+      <div class="muted">Est. discount captured: ${money(Math.max(0, S.regularTotal - p.groceries))} vs. est. regular prices</div>
+      ${cmp}</div>`;
+  }
+
+  function routeCard(S, p, title) {
+    const buckets = assignItems(S, p), L = legs(S, p);
+    const rows = buckets.map((x, i) => `
+      <li><strong>${esc(x.stop.chain)}</strong>
+        <span class="muted">· ${fmtDist(L[i])} from ${i ? 'previous stop' : 'home'} · ${esc(x.stop.label)} · <a href="${mapsLink(x.stop)}" target="_blank" rel="noopener">map</a></span>
+        <div class="muted">Buy: ${x.items.length ? x.items.map(({ r, a }) =>
+          `${esc(r.query)} (${a.kind === 'sale' ? money(a.cost) : '≈ ' + money(a.cost) + ' est.'})`).join(', ') : '—'}</div></li>`).join('');
+    return `<div class="card">
+      <h3>${title}</h3>
+      <ol class="route"><li>Start at home</li>${rows}<li>Back home <span class="muted">· ${fmtDist(L[L.length - 1])}</span></li></ol>
+      <div>${fmtDist(p.dist)} total · ${money(p.gas)} gas · <a href="${routeLink(S, p)}" target="_blank" rel="noopener">Open route in Google Maps</a></div>
+      ${S.geo.road ? '' : '<div class="muted warn">Driving distances were unavailable; using straight-line distance × 1.3 as an estimate.</div>'}
+    </div>`;
+  }
+
+  function renderMissing(missing) {
+    if (!missing.length) return '';
+    return `<div class="card"><h3>No flyer offers this week</h3>${missing.map(r =>
+      `<div>${esc(r.query)} ${r.error ? `<span class="warn">– ${esc(r.error)}</span>` : ''}${r.regular
+        ? `<span class="muted"> – using your price ${money(r.regular.cost)} at every store</span>` : ''}</div>`).join('')}
+      <p class="muted">Try a simpler term (e.g. "butter" instead of "unsalted butter 454g") or untick strict matching.
+      Items with no price at all are left out of every total; add <code>| $4.99</code> to a line to include one.</p></div>`;
+  }
+
+  function render(S) {
+    const { results } = S;
     const found = results.filter(r => r.offers.length);
     const missing = results.filter(r => !r.offers.length);
 
@@ -236,56 +734,63 @@
       return;
     }
 
-    const stores = rankStores(found);
-    const top = stores[0];
-    const splitTotal = found.reduce((s, r) => s + r.offers[0].unit, 0);
-    const splitStores = [...new Set(found.map(r => r.offers[0].merchant))];
-    const topMissing = found.filter(r => !top.items.some(i => i.query === r.query)).map(r => r.query);
+    S.stores = summarizeStores(S);
+    const cards = [];
 
+    // cheapest possible basket, ignoring travel
+    let around = 0; const used = new Set();
+    for (const r of S.priced) {
+      const o = r.offers[0];
+      if (o && o.cost <= r.regular.cost) { around += o.cost; used.add(o.merchant); } else around += r.regular.cost;
+    }
+    cards.push(`<div class="card">
+      <h3>Cheapest groceries (ignoring travel)</h3>
+      <div class="num">${money(around)}</div>
+      <div>${S.priced.length} item${S.priced.length === 1 ? '' : 's'} from ${used.size} store${used.size === 1 ? '' : 's'}: ${[...used].map(esc).join(', ') || '—'}</div>
+      <div class="muted">Items with no better deal are counted at their est. regular price.</div></div>`);
+
+    let routeHtml = '';
+    if (S.plans) {
+      const { best, maxSave, nearest } = S.plans;
+      cards.push(planCard('Best route (lowest groceries + gas)', best, nearest, S));
+      if (planKey(maxSave) !== planKey(best)) cards.push(planCard('Max discount, least driving', maxSave, nearest, S));
+      cards.push(planCard('Nearest store only', nearest, nearest, S));
+      routeHtml = routeCard(S, best, 'Your route: lowest groceries + gas');
+      if (planKey(maxSave) !== planKey(best)) routeHtml += routeCard(S, maxSave, 'Alternative: maximum discount');
+      else routeHtml += `<p class="muted">The best-value route also captures the maximum available discount.</p>`;
+    } else if (S.stores.length) {
+      const top = S.stores[0];
+      cards.push(`<div class="card"><h3>Best single stop (by basket total)</h3>
+        <div class="num">${esc(top.name)}</div>
+        <div>${top.saleN} of ${S.priced.length} items on sale · ${money(top.total)}</div></div>`);
+    }
+
+    const perDist = S.gasKm * (S.loc.country === 'us' ? KM_PER_MI : 1);
+    const notice = S.geoError ? `<div class="card notice"><strong>Distances and routes unavailable.</strong> ${esc(S.geoError)}</div>` : '';
     els.summary.innerHTML = `
       <h2>Summary</h2>
-      <div class="cards">
-        <div class="card">
-          <h3>Cheapest if you shop around</h3>
-          <div class="num">${money(splitTotal)}</div>
-          <div>${found.length} item${found.length === 1 ? '' : 's'} from ${splitStores.length} store${splitStores.length === 1 ? '' : 's'}:
-            ${splitStores.map(esc).join(', ')}</div>
-        </div>
-        <div class="card">
-          <h3>Best single stop</h3>
-          <div class="num">${esc(top.name)}</div>
-          <div>${top.items.length} of ${found.length} items · ${money(top.total)}
-            ${top.extra > 0.005 ? `<span class="muted">(+${money(top.extra)} vs. cheapest on those)</span>` : ''}</div>
-          ${topMissing.length ? `<div class="muted">Not on sale there: ${topMissing.map(esc).join(', ')}</div>` : ''}
-        </div>
-      </div>
+      <div class="cards">${cards.join('')}</div>
+      ${notice}
+      ${S.plans ? `<p class="muted">Gas is estimated at ${money(perDist)} per ${S.loc.country === 'us' ? 'mile' : 'km'}; every route is a round trip from your ${els.postal.dataset.lat ? 'current location' : 'postal code area'}.
+        Stores are real branches found on OpenStreetMap; the route search tries up to ${MAX_CHAINS} chains and your nearest ${LOCS_PER_CHAIN} branches of each.</p>` : ''}
+      ${routeHtml}`;
 
-      <div class="card" style="margin-top:16px">
-        <h3>Stores ranked</h3>
-        <table>
-          <tr><th>Store</th><th>Items covered</th><th style="text-align:right">Est. total</th></tr>
-          ${stores.slice(0, 8).map(s => `<tr>
-            <td><strong>${esc(s.name)}</strong></td>
-            <td>${s.items.length} / ${found.length}
-                <div class="muted">${s.items.map(i => esc(i.query)).join(', ')}</div></td>
-            <td class="price">${money(s.total)}</td></tr>`).join('')}
-        </table>
-        <p class="muted">Totals only include items found on sale at that store this week, so compare coverage and price together.</p>
-      </div>`;
-
-    els.details.innerHTML = `<h2>Item by item</h2>` +
-      results.filter(r => r.offers.length).map(r => `
+    const shown = S.stores.slice(0, 10);
+    els.details.innerHTML =
+      `<h2>Store by store</h2>
+       <p class="muted">Every item on your list at each store: the flyer price where there's a deal, otherwise an <em>estimated</em> regular price.
+       Flyers only publish sale prices, so the estimate is the same at every store; check the shelf price.</p>` +
+      shown.map(s => storeCard(s, S)).join('') +
+      (S.stores.length > shown.length ? `<p class="muted">Showing the best ${shown.length} of ${S.stores.length} stores.</p>` : '') +
+      `<h2>Item by item</h2>` +
+      found.map(r => `
         <div class="card">
-          <h3>${esc(r.query)} <span class="muted">· ${r.offers.length} offer${r.offers.length === 1 ? '' : 's'}</span></h3>
-          <table>${r.offers.slice(0, 6).map((o, i) => offerRow(o, i === 0)).join('')}</table>
-        </div>`).join('') + renderMissing(missing);
-  }
-
-  function renderMissing(missing) {
-    if (!missing.length) return '';
-    return `<div class="card"><h3>No match this week</h3>${missing.map(r =>
-      `<div>${esc(r.query)} ${r.error ? `<span class="warn">– ${esc(r.error)}</span>` : ''}</div>`).join('')}
-      <p class="muted">Try a simpler term (e.g. "butter" instead of "unsalted butter 454g") or untick strict matching.</p></div>`;
+          <h3>${esc(r.query)} <span class="muted">· ${r.offers.length} offer${r.offers.length === 1 ? '' : 's'} ·
+            ${r.ref ? `compared per ${refLabel(r.ref)}${r.ref.assumed ? ' (no pack sizes found)' : ''}` : 'compared per package (no sizes found)'}</span></h3>
+          <table>${r.offers.slice(0, 6).map((o, i) => offerRow(o, i === 0, r)).join('')}</table>
+          ${r.regular ? `<p class="muted">Est. regular price${r.ref ? ' for ' + refLabel(r.ref) : ''}: ${money(r.regular.cost)} – ${SRC[r.regular.source]}.</p>` : ''}
+        </div>`).join('') +
+      renderMissing(missing);
   }
 
   // ---------- main ----------
@@ -293,29 +798,68 @@
     const loc = parsePostal(els.postal.value);
     if (!loc) return setStatus('Enter a valid US ZIP code or Canadian postal code.', true);
 
-    const queries = [...new Set(els.list.value.split('\n').map(s => s.trim()).filter(Boolean))].slice(0, 40);
-    if (!queries.length) return setStatus('Add at least one item to your list.', true);
+    const items = parseList(els.list.value);
+    if (!items.length) return setStatus('Add at least one item to your list.', true);
 
+    applyCountry(loc.country);
+    const set = readRaw();
+    saved[loc.country] = set;
     localStorage.setItem('fp.postal', els.postal.value);
     localStorage.setItem('fp.list', els.list.value);
-    money = n => new Intl.NumberFormat(loc.intl, { style:'currency', currency:loc.currency }).format(n);
+    localStorage.setItem('fp.settings', JSON.stringify(saved));
+
+    money  = n => new Intl.NumberFormat(loc.intl, { style:'currency', currency:loc.currency }).format(n);
+    moneyP = n => new Intl.NumberFormat(loc.intl, { style:'currency', currency:loc.currency,
+                    minimumFractionDigits:2, maximumFractionDigits: n < 0.01 ? 5 : n < 0.1 ? 4 : 2 }).format(n);
+    fmtDist = loc.country === 'us' ? km => (km / KM_PER_MI).toFixed(1) + ' mi' : km => km.toFixed(1) + ' km';
+
+    const radiusKm = Math.min(50, loc.country === 'us' ? set.radius * KM_PER_MI : set.radius);
+    const gasKm = loc.country === 'us' ? set.fuel / set.eff / KM_PER_MI : set.fuel * set.eff / 100;   // $ per km
 
     els.go.disabled = true;
     els.summary.innerHTML = els.details.innerHTML = '';
     let done = 0;
-    setStatus(`Checking 0 of ${queries.length}…`);
+    setStatus(`Checking 0 of ${items.length}…`);
 
-    const results = await pool(queries, 3, async q => {
-      try   { return { query:q, offers: await findOffers(q, loc, els.strict.checked) }; }
-      catch (e) { return { query:q, offers:[], error:e.message }; }
-      finally   { setStatus(`Checking ${++done} of ${queries.length}…`); }
-    });
+    const homeP = getHome(loc).catch(() => null);      // geocode while the searches run
+    const opts = { strict:els.strict.checked, lookup:els.lookup.checked };
 
-    const errors = results.filter(r => r.error);
-    if (errors.length === results.length) setStatus(errors[0].error, true);
-    else setStatus(`Done. ${results.filter(r => r.offers.length).length} of ${queries.length} items found.`);
-    render(results, queries.length);
-    els.go.disabled = false;
+    try {
+      const results = await pool(items, 3, async it => {
+        try   { return await processQuery(it, loc, opts); }
+        catch (e) {
+          return { query:it.query, offers:[], byStore:new Map(), ref:null, error:e.message,
+                   regular: it.price != null ? { cost:it.price, source:'you' } : null };
+        }
+        finally { setStatus(`Checking ${++done} of ${items.length}…`); }
+      });
+
+      const errors = results.filter(r => r.error);
+      const priced = results.filter(r => r.regular);
+      const S = { loc, results, priced, gasKm, geo:null, geoError:'', plans:null,
+                  regularTotal:priced.reduce((s, r) => s + r.regular.cost, 0) };
+
+      if (results.some(r => r.offers.length)) {
+        setStatus('Finding store locations and distances…');
+        try {
+          const merchants = rankMerchants(results).slice(0, MAX_MERCHANTS);
+          S.geo = await locateStores(await homeP, merchants, radiusKm);
+          if (!S.geo.chains.length) {
+            S.geoError = `None of these stores were found on OpenStreetMap within ${set.radius} ${loc.country === 'us' ? 'miles' : 'km'}. Try a larger radius.`;
+            S.geo = null;
+          }
+        } catch (e) { S.geoError = e.message; }
+        if (S.geo && S.priced.length) {
+          try { S.plans = buildPlans(S); } catch (e) { S.geoError = 'Route search failed: ' + e.message; }
+        }
+      }
+
+      if (errors.length === results.length) setStatus(errors[0].error, true);
+      else setStatus(`Done. ${results.filter(r => r.offers.length).length} of ${items.length} items found.`);
+      render(S);
+    } finally {
+      els.go.disabled = false;
+    }
   });
 })();
 </script>
