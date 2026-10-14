@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#059669" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#10b981" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#059669">
 <title>Cheapest Near Me Pro – Multi-API Flyer & Route Optimizer</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -29,26 +28,25 @@
     --shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
     --radius: 12px;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0b0f17;
-      --card: #151c28;
-      --card-alt: #1e293b;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --accent: #10b981;
-      --accent-hover: #34d399;
-      --accent-bg: #064e3b;
-      --accent-border: #047857;
-      --blue: #60a5fa;
-      --blue-bg: #1e3a8a;
-      --amber: #fbbf24;
-      --amber-bg: #451a03;
-      --border: #263143;
-      --err: #f87171;
-      --err-bg: #450a0a;
-      --shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-    }
+  /* Manual theme override: JS toggles .dk on <html> based on system pref or user choice */
+  :root.dk {
+    --bg: #0b0f17;
+    --card: #151c28;
+    --card-alt: #1e293b;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #10b981;
+    --accent-hover: #34d399;
+    --accent-bg: #064e3b;
+    --accent-border: #047857;
+    --blue: #60a5fa;
+    --blue-bg: #1e3a8a;
+    --amber: #fbbf24;
+    --amber-bg: #451a03;
+    --border: #263143;
+    --err: #f87171;
+    --err-bg: #450a0a;
+    --shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   }
   * { box-sizing: border-box; }
   body {
@@ -75,17 +73,8 @@
     gap: 12px;
     flex-wrap: wrap;
   }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .brand h1 {
-    font-size: 1.25rem;
-    margin: 0;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand h1 { font-size: 1.25rem; margin: 0; font-weight: 800; letter-spacing: -0.02em; }
   .badge-pro {
     background: var(--accent-bg);
     color: var(--accent);
@@ -96,26 +85,15 @@
     font-weight: 700;
     text-transform: uppercase;
   }
-  .header-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  main {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: 20px 18px 80px;
-  }
+  .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 18px 80px; }
   .top-grid {
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
     gap: 18px;
     align-items: start;
   }
-  @media (max-width: 900px) {
-    .top-grid { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 900px) { .top-grid { grid-template-columns: 1fr; } }
   h2 { margin: 28px 0 12px; font-size: 1.25rem; }
   h3 { margin: 0 0 8px; font-size: 1.02rem; }
   a { color: var(--accent); text-decoration: none; }
@@ -147,7 +125,7 @@
     margin-bottom: 8px;
     cursor: pointer;
   }
-  input[type=text], input[type=number], select, textarea {
+  input[type=text], input[type=number], input[type=password], select, textarea {
     width: 100%;
     padding: 9px 11px;
     margin-top: 4px;
@@ -158,10 +136,7 @@
     font: inherit;
     transition: border-color 0.15s;
   }
-  input:focus, select:focus, textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
   .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
   .row label { flex: 1 1 160px; margin-bottom: 0; }
   .row.compact { margin-top: 12px; }
@@ -182,31 +157,14 @@
     transition: background 0.15s, opacity 0.15s;
   }
   button:hover:not(:disabled) { background: var(--accent-hover); }
-  @media (prefers-color-scheme: dark) {
-    button { color: #042f2e; }
-  }
-  button.secondary {
-    background: var(--card-alt);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  button.secondary:hover:not(:disabled) {
-    background: var(--border);
-  }
-  button.sm {
-    padding: 5px 10px;
-    font-size: 0.82rem;
-    border-radius: 6px;
-  }
+  :root.dk button { color: #042f2e; }
+  button.secondary { background: var(--card-alt); color: var(--text); border: 1px solid var(--border); }
+  button.secondary:hover:not(:disabled) { background: var(--border); }
+  button.sm { padding: 5px 10px; font-size: 0.82rem; border-radius: 6px; }
   button:disabled { opacity: 0.55; cursor: wait; }
 
   /* Quick staples & builder */
-  .staples-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin: 8px 0 12px;
-  }
+  .staples-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
   .chip {
     padding: 4px 10px;
     border-radius: 99px;
@@ -218,17 +176,12 @@
     user-select: none;
     transition: all 0.12s;
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
-  .chip:hover {
-    border-color: var(--accent);
-    background: var(--accent-bg);
-    color: var(--accent);
-  }
-  .chip.off {
-    opacity: 0.5;
-    text-decoration: line-through;
-    border-style: dashed;
-  }
+  .chip:hover { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+  .chip.off { opacity: 0.5; text-decoration: line-through; border-style: dashed; }
   .chip.off:hover { border-color: var(--err); color: var(--err); background: var(--err-bg); }
   .mode-tabs {
     display: flex;
@@ -238,18 +191,8 @@
     border-radius: 8px;
     border: 1px solid var(--border);
   }
-  .mode-tabs button {
-    background: transparent;
-    color: var(--muted);
-    padding: 4px 10px;
-    font-size: 0.8rem;
-    border-radius: 6px;
-  }
-  .mode-tabs button.active {
-    background: var(--card);
-    color: var(--text);
-    box-shadow: var(--shadow);
-  }
+  .mode-tabs button { background: transparent; color: var(--muted); padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; }
+  .mode-tabs button.active { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
   .builder-list {
     display: flex;
     flex-direction: column;
@@ -266,18 +209,11 @@
     align-items: center;
   }
   .builder-row input { margin-top: 0; padding: 7px 9px; font-size: 0.88rem; }
-  .builder-row button.del {
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border);
-    padding: 6px 9px;
-  }
+  .builder-row button.del { background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 6px 9px; }
   .builder-row button.del:hover { color: var(--err); border-color: var(--err); }
 
   /* API telemetry & progress */
-  .progress-wrap {
-    margin-top: 12px;
-  }
+  .progress-wrap { margin-top: 12px; }
   .progress-bar {
     height: 6px;
     background: var(--card-alt);
@@ -285,12 +221,7 @@
     overflow: hidden;
     border: 1px solid var(--border);
   }
-  .progress-fill {
-    height: 100%;
-    width: 0%;
-    background: var(--accent);
-    transition: width 0.25s ease;
-  }
+  .progress-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.25s ease; }
   #status {
     margin-top: 6px;
     min-height: 1.4em;
@@ -303,13 +234,7 @@
     flex-wrap: wrap;
   }
   #status.error { color: var(--err); font-weight: 600; }
-
-  .api-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 10px;
-  }
+  .api-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .api-pill {
     font-size: 0.75rem;
     padding: 3px 9px;
@@ -321,23 +246,11 @@
     align-items: center;
     gap: 5px;
   }
-  .api-pill.ok {
-    background: var(--accent-bg);
-    color: var(--accent);
-    border-color: var(--accent-border);
-  }
-  .api-pill.warn {
-    background: var(--amber-bg);
-    color: var(--amber);
-  }
+  .api-pill.ok { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-border); }
+  .api-pill.warn { background: var(--amber-bg); color: var(--amber); }
 
   /* Map */
-  #map-card {
-    padding: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
+  #map-card { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
   .map-toolbar {
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
@@ -347,12 +260,7 @@
     gap: 8px;
     flex-wrap: wrap;
   }
-  #map {
-    width: 100%;
-    height: 390px;
-    background: var(--card-alt);
-    z-index: 1;
-  }
+  #map { width: 100%; height: 390px; background: var(--card-alt); z-index: 1; }
   .map-legend {
     padding: 9px 16px;
     font-size: 0.8rem;
@@ -363,14 +271,7 @@
     flex-wrap: wrap;
     background: var(--card-alt);
   }
-  .dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 4px;
-    vertical-align: middle;
-  }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 
   /* Leaflet popup controls (popup surface is always light) */
   .leaflet-popup-content .pop-btn {
@@ -384,6 +285,7 @@
     font: 600 12.5px system-ui, sans-serif;
     cursor: pointer;
   }
+  .leaflet-popup-content .pop-btn + .pop-btn { margin-left: 6px; }
   .leaflet-popup-content .pop-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
 
   /* Navigation Tabs for Results */
@@ -404,39 +306,18 @@
     font-size: 0.9rem;
     white-space: nowrap;
   }
-  .view-tabs button.active {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-  }
-  @media (prefers-color-scheme: dark) {
-    .view-tabs button.active { color: #042f2e; }
-  }
+  .view-tabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  :root.dk .view-tabs button.active { color: #042f2e; }
 
   /* Cards & Tables */
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
-    gap: 14px;
-  }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 14px; }
   .cards .card { margin-top: 0; }
-  .card.selectable {
-    cursor: pointer;
-    transition: transform 0.12s, border-color 0.12s;
-  }
+  .card.selectable { cursor: pointer; transition: transform 0.12s, border-color 0.12s; }
   .card.selectable:hover { transform: translateY(-2px); border-color: var(--accent); }
-  .card.selectable.selected-plan {
-    border: 2px solid var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-bg);
-  }
+  .card.selectable.selected-plan { border: 2px solid var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
   .num { font-size: 1.85rem; font-weight: 800; color: var(--accent); line-height: 1.15; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  td, th {
-    padding: 9px 7px;
-    border-top: 1px solid var(--border);
-    text-align: left;
-    vertical-align: top;
-  }
+  td, th { padding: 9px 7px; border-top: 1px solid var(--border); text-align: left; vertical-align: top; }
   th {
     font-size: 0.76rem;
     color: var(--muted);
@@ -466,19 +347,10 @@
     font-size: 0.73rem;
     font-weight: 600;
   }
-  .tag.src-tag {
-    background: var(--blue-bg);
-    color: var(--blue);
-  }
-  .tag.est {
-    background: transparent;
-    border: 1px dashed var(--border);
-    color: var(--muted);
-  }
-  .tag.warn-tag {
-    background: var(--amber-bg);
-    color: var(--amber);
-  }
+  .tag.src-tag { background: var(--blue-bg); color: var(--blue); }
+  .tag.est { background: transparent; border: 1px dashed var(--border); color: var(--muted); }
+  .tag.warn-tag { background: var(--amber-bg); color: var(--amber); }
+  .tag.book-tag { background: var(--blue-bg); color: var(--blue); }
   .pu { font-weight: 600; font-size: 0.81rem; color: var(--text); }
   .warn { color: var(--err); }
   .est { color: var(--muted); font-style: italic; }
@@ -495,6 +367,24 @@
   ol.route { margin: 10px 0; padding-left: 22px; }
   ol.route li { margin-bottom: 12px; }
 
+  /* Price matrix */
+  table.mx td, table.mx th { font-size: 0.82rem; padding: 6px 5px; white-space: nowrap; }
+  table.mx td.mx-best { background: var(--accent-bg); font-weight: 700; color: var(--accent); }
+  table.mx td.mx-miss { color: var(--muted); opacity: 0.55; }
+  .mx-scroll { overflow-x: auto; }
+
+  /* Trip history list */
+  .trip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 5px 0;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+  }
+  .trip-row:first-of-type { border-top: 0; }
+
   /* Interactive Checklist */
   .check-item {
     display: flex;
@@ -505,16 +395,28 @@
     cursor: pointer;
   }
   .check-item:last-child { border-bottom: 0; }
-  .check-item.checked {
-    opacity: 0.55;
-    text-decoration: line-through;
+  .check-item.checked { opacity: 0.55; text-decoration: line-through; }
+  .check-item input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; flex: 0 0 auto; }
+
+  /* Dialogs */
+  dialog {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    max-width: 540px;
+    width: calc(100vw - 32px);
+    max-height: 86vh;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--text);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    padding: 20px;
+    font: inherit;
   }
-  .check-item input[type=checkbox] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    flex: 0 0 auto;
-  }
+  dialog::backdrop { background: rgba(2, 6, 23, 0.55); }
+  dialog h3 { margin-top: 0; }
 
   /* Toast notifications */
   #toastWrap {
@@ -543,18 +445,9 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
     animation: toastIn 0.18s ease-out;
   }
-  @keyframes toastIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-  footer {
-    margin-top: 48px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); }
 
   /* Mobile hardening */
   @media (max-width: 700px) {
@@ -572,7 +465,7 @@
     .check-item { padding: 11px 10px; }
     .num { font-size: 1.5rem; }
     /* 16px inputs prevent unwanted iOS Safari auto-zoom */
-    input[type=text], input[type=number], select, textarea { font-size: 16px; }
+    input[type=text], input[type=number], input[type=password], select, textarea { font-size: 16px; }
     .view-tabs button { padding: 8px 11px; font-size: 0.84rem; }
   }
 
@@ -591,14 +484,14 @@
       <span style="font-size:1.5rem">🛒</span>
       <div>
         <h1>Cheapest Near Me <span class="badge-pro">Pro Multi-API</span></h1>
-        <div class="sub" style="font-size:0.78rem">Live Weekly Flyers · Verified Store Locations · Road-Network Route Optimizer</div>
+        <div class="sub" style="font-size:0.78rem">Live Flyers · Your Price Book · Verified Store Locations · Road-Network Route Optimizer</div>
       </div>
     </div>
     <div class="header-actions">
-      <button id="btnSample" type="button" class="secondary sm">✨ Sample</button>
+      <button id="btnTheme" type="button" class="secondary sm" title="Toggle theme">🌓</button>
+      <button id="btnSettings" type="button" class="secondary sm">⚙️ Settings</button>
       <button id="btnShare" type="button" class="secondary sm">🔗 Copy Link</button>
       <button id="btnCopyTrip" type="button" class="secondary sm" style="display:none">📋 Checklist</button>
-      <button id="btnCsv" type="button" class="secondary sm" style="display:none">⬇️ CSV</button>
       <button id="btnPrint" type="button" class="secondary sm" style="display:none" onclick="window.print()">🖨️ Print</button>
     </div>
   </div>
@@ -650,9 +543,10 @@
 
       <!-- Raw Textarea Mode -->
       <div id="rawWrap" style="display:none">
-        <textarea id="list" rows="7" placeholder="milk | 2 L | $4.99&#10;eggs | | $4.29&#10;chicken breast&#10;bananas"></textarea>
+        <textarea id="list" rows="7" placeholder="2x milk | 2 L | $4.99&#10;eggs | | $4.29&#10;chicken breast&#10;bananas"></textarea>
         <p class="muted" style="margin:4px 0 0">
-          Format: <code>item name | target size | $regular_price</code> (size &amp; regular price are optional).
+          Format: <code>[qty x] item name | target size | $regular_price</code> (size, quantity &amp; regular price are optional).
+          Example: <code>2x milk | 2 L | $4.99</code>
         </p>
       </div>
 
@@ -701,6 +595,8 @@
         <span class="api-pill" id="pillFlipp">Flipp API: Idle</span>
         <span class="api-pill" id="pillGeo">Geocoder: Idle</span>
         <span class="api-pill" id="pillPoi">Store Locators (Overpass + Photon + Nominatim): Idle</span>
+        <span class="api-pill" id="pillGoogle">Google Places: Idle</span>
+        <span class="api-pill" id="pillBook">My Price Book: 0 entries</span>
         <span class="api-pill" id="pillRoute">Routing (OSRM + FOSSGIS): Idle</span>
       </div>
     </section>
@@ -732,8 +628,9 @@
   <div class="view-tabs" id="viewTabs" style="display:none">
     <button type="button" data-view="all" class="active">📊 Overview &amp; Routes</button>
     <button type="button" data-view="checklist">✅ Active Trip Checklist</button>
+    <button type="button" data-view="matrix">🧮 Price Matrix</button>
     <button type="button" data-view="stores">🏪 Store-by-Store Breakdown</button>
-    <button type="button" data-view="items">🥫 Item-by-Item Flyer Comparison</button>
+    <button type="button" data-view="items">🥫 Item-by-Item Comparison</button>
   </div>
 
   <section id="summary"></section>
@@ -741,16 +638,81 @@
   <section id="details"></section>
 
   <footer>
-    <strong>Multi-API Architecture:</strong> Live flyer pricing via Flipp (<code>backflipp.wishabi.com</code>). Postal &amp; GPS geocoding via <strong>Nominatim (OpenStreetMap)</strong>, <strong>Photon (Komoot)</strong>, and <strong>Zippopotam.us</strong>. Physical store branch discovery combines <strong>Flipp Store Metadata</strong>, a <strong>3-mirror Overpass QL cluster</strong> (<code>overpass-api.de</code>, <code>kumi.systems</code>, <code>mail.ru</code>), <strong>Photon Spatial POI Search</strong> (<code>photon.komoot.io</code>), and <strong>Nominatim Bounded Search</strong> with strict retail POI validation.<br>
-    <strong>Location trust engine:</strong> self-reported store coordinates are cross-verified against OpenStreetMap, area-centroid leaks are detected and discarded, and remaining unverified pins are reverse-address-checked via Photon. Any branch can be excluded from routing directly on the map or in store cards; exclusions are remembered per postal code. Driving distance matrices and turn-by-turn road geometry use <strong>OSRM</strong> (<code>router.project-osrm.org</code>) and <strong>FOSSGIS OSRM</strong> (<code>routing.openstreetmap.de</code>).<br>
-    Unofficial tool; not affiliated with Flipp or any retail chain. Always verify in-store unit sizes, loyalty card requirements, and quantity limits.
+    <strong>Multi-Source Architecture:</strong> Live flyer pricing via Flipp (<code>backflipp.wishabi.com</code>) merged with <strong>your own Price Book</strong> (prices you save per store, stored locally) and cross-run <strong>price history trends</strong>. Postal &amp; GPS geocoding via <strong>Nominatim (OpenStreetMap)</strong>, <strong>Photon (Komoot)</strong>, and <strong>Zippopotam.us</strong>. Physical store branch discovery combines <strong>Flipp Store Metadata</strong>, a <strong>3-mirror Overpass QL cluster</strong> (<code>overpass-api.de</code>, <code>kumi.systems</code>, <code>mail.ru</code>), <strong>Photon Spatial POI Search</strong>, <strong>Nominatim Bounded Search</strong>, and optionally <strong>Google Places API</strong> (your own key, set in ⚙️ Settings) with strict retail POI validation.<br>
+    <strong>Location trust engine:</strong> self-reported store coordinates are cross-verified against OpenStreetMap, area-centroid leaks are detected and discarded, and remaining unverified pins are reverse-address-checked via Photon. Any branch — or an entire chain — can be excluded from routing on the map or in store cards; exclusions are remembered per postal code. Driving distance matrices and turn-by-turn road geometry use <strong>OSRM</strong> (<code>router.project-osrm.org</code>) and <strong>FOSSGIS OSRM</strong> (<code>routing.openstreetmap.de</code>).<br>
+    Unofficial tool; not affiliated with Flipp, Google, or any retail chain. Always verify in-store unit sizes, loyalty card requirements, and quantity limits.
   </footer>
 </main>
+
+<!-- Settings Dialog -->
+<dialog id="settingsDlg">
+  <h3>⚙️ Settings</h3>
+
+  <label>Appearance
+    <select id="setTheme">
+      <option value="system">Follow system</option>
+      <option value="light">Always light</option>
+      <option value="dark">Always dark</option>
+    </select>
+  </label>
+
+  <label>Google Places API key <span class="muted" style="font-weight:400">(optional)</span>
+    <input type="password" id="setGkey" placeholder="AIza…" autocomplete="off">
+  </label>
+  <p class="muted" style="margin:2px 0 12px">
+    Adds Google Places as an extra store-locator source (improves branch coverage &amp; addresses).
+    Create a key with the <em>Places API (New)</em> enabled in Google Cloud Console. The key is stored
+    only in your browser and sent only to Google. If left empty the app uses free OpenStreetMap sources only.
+  </p>
+
+  <div class="row compact">
+    <label title="Extra minutes per store stop (parking, checkout) counted when Time value > 0">Stop overhead (min)
+      <input type="number" id="setStop" min="0" step="1"></label>
+    <label title="Average driving speed used to estimate trip duration">City speed (km/h)
+      <input type="number" id="setSpeed" min="10" step="1"></label>
+    <label title="Regular-price assumption when no 'was' price exists in flyers">Regular markup (%)
+      <input type="number" id="setMarkup" min="0" step="1"></label>
+  </div>
+
+  <div style="margin-top:16px">
+    <strong style="font-size:0.9rem">Manage saved data</strong>
+    <div class="staples-bar" style="margin:8px 0 0">
+      <button type="button" class="chip" id="dataClearExcl">Clear branch exclusions</button>
+      <button type="button" class="chip" id="dataClearBook">Clear my price book</button>
+      <button type="button" class="chip" id="dataClearHist">Clear price history &amp; trips</button>
+      <button type="button" class="chip" id="dataResetAll" style="border-color:var(--err); color:var(--err)">Reset everything</button>
+    </div>
+  </div>
+
+  <div style="display:flex; justify-content:flex-end; margin-top:18px">
+    <button type="button" id="setClose" style="min-width:110px">Done</button>
+  </div>
+</dialog>
+
+<!-- Small ask-value dialog for price book entries -->
+<dialog id="askDlg">
+  <h3 id="askTitle" style="margin-top:0"></h3>
+  <label>Price ($)
+    <input type="number" id="askInput" step="0.01" min="0" inputmode="decimal">
+  </label>
+  <p class="muted" style="margin:2px 0 0">Leave empty and save to remove the entry.</p>
+  <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px">
+    <button type="button" class="secondary" id="askCancel">Cancel</button>
+    <button type="button" id="askOk">Save</button>
+  </div>
+</dialog>
 
 <div id="toastWrap" aria-live="polite"></div>
 
 <script>
 (() => {
+  // ============================================================
+  // CUSTOMIZATION GUIDE
+  // Everything below marked "tweakable" can be adjusted safely.
+  // User-facing runtime options live in the ⚙️ Settings dialog
+  // and persist in localStorage under the "fp." namespace.
+  // ============================================================
+
   // ---------- API Endpoints & Configuration ----------
   const FLIPP_BASES = [
     'https://backflipp.wishabi.com/flipp',
@@ -770,16 +732,26 @@
     'https://routing.openstreetmap.de/routed-car'
   ];
 
+  const GOOGLE_PLACES_URL = 'https://places.googleapis.com/v1/places:searchText';
+
   const KM_PER_MI = 1.609344;
-  const ASSUMED_MARKUP = 1.2;
   const MAX_CHAINS = 8;
   const LOCS_PER_CHAIN = 5;
   const MAX_MERCHANTS = 18;
   const LOOKUPS_PER_ITEM = 5;
-  const STOP_OVERHEAD_HOURS = 0.22; // ~13 mins parking/checkout per store stop when time-value > 0
   const AVG_CITY_SPEED_KMH = 42;
   const VERIFY_REVERSE_LIMIT = 12;  // max Photon reverse lookups for unverified Flipp pins
   const CENTROID_DUP_THRESHOLD = 3; // >=3 distinct Flipp addresses at one point => area centroid, discard
+  const MAX_TRIPS_KEPT = 20;
+
+  // Runtime-tunable settings (edited via ⚙️ Settings, persisted in localStorage)
+  const CFG = Object.assign(
+    { stopMin: 13, speed: 42, markup: 20 },
+    (() => { try { return JSON.parse(localStorage.getItem('fp.cfg') || '{}'); } catch { return {}; } })()
+  );
+  const saveCfg = () => localStorage.setItem('fp.cfg', JSON.stringify(CFG));
+  const stopOverheadH = () => CFG.stopMin / 60;
+  const markupMult = () => 1 + CFG.markup / 100;
 
   // Non-physical / online-only / manufacturer coupon portals on Flipp that have no retail grocery branches
   const ONLINE_ONLY_MERCHANTS = new Set([
@@ -891,7 +863,7 @@
     fuel: $('fuel'), eff: $('eff'), radius: $('radius'), maxStops: $('maxStops'), timeVal: $('timeVal'),
     builderList: $('builderList'), visualWrap: $('visualWrap'), rawWrap: $('rawWrap'),
     tabVisual: $('tabVisual'), tabRaw: $('tabRaw'), viewTabs: $('viewTabs'),
-    btnCopyTrip: $('btnCopyTrip'), btnCsv: $('btnCsv'), btnPrint: $('btnPrint'), btnShare: $('btnShare')
+    btnCopyTrip: $('btnCopyTrip'), btnPrint: $('btnPrint'), btnShare: $('btnShare')
   };
 
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -943,15 +915,35 @@
   const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
 
-  // ---------- Branch exclusion persistence (per postal code) ----------
+  // ---------- Persistence helpers ----------
+  const loadJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k) ?? d); } catch { return d; } };
+  const saveJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  // Branch exclusion persistence (per postal code)
   const locKey = l => `${l.chain}|${l.lat.toFixed(5)}|${l.lon.toFixed(5)}`;
-  function getExcluded(postal) {
-    try { return new Set(JSON.parse(localStorage.getItem('fp.excl.' + postal) || '[]')); }
-    catch { return new Set(); }
+  const getExcluded = postal => new Set(loadJSON('fp.excl.' + postal, []));
+  const setExcluded = (postal, set) => saveJSON('fp.excl.' + postal, [...set]);
+
+  // Chain-level exclusion persistence (global)
+  const getChainExcluded = () => new Set(loadJSON('fp.chainexcl', []));
+  const setChainExcluded = set => saveJSON('fp.chainexcl', [...set]);
+  const isChainExcluded = name => getChainExcluded().has(name);
+
+  // Price Book: "item @ store" -> { p: price, d: date }
+  const bookKey = (item, store) => item + ' @ ' + store;
+  const getBook = () => loadJSON('fp.book', {});
+  const setBook = b => saveJSON('fp.book', b);
+  const bookCount = () => Object.keys(getBook()).length;
+  function updateBookPill() {
+    const n = bookCount();
+    setPill('pillBook', `My Price Book: ${n} ${n === 1 ? 'entry' : 'entries'}`, n ? 'ok' : '');
   }
-  function setExcluded(postal, set) {
-    try { localStorage.setItem('fp.excl.' + postal, JSON.stringify([...set])); } catch {}
-  }
+
+  // Price history per country: query -> { p: best unit price, d: date }
+  const histKey = c => 'fp.hist.' + c;
+
+  // Trip history
+  const getTrips = () => loadJSON('fp.trips', []);
 
   // ---------- Location trust / confidence ----------
   const isOsmSource = s => /Overpass|Photon|Nominatim/.test(s || '');
@@ -962,6 +954,91 @@
   };
   const confBadge = l => `<span class="${confInfo(l).cls}">${confInfo(l).txt}</span>`;
   const confMark = l => l.conf === 'verified' ? '✓' : l.conf === 'checked' ? '◦' : '⚠';
+
+  // ---------- Theme (system / light / dark with manual override) ----------
+  const themeMQ = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+  function applyTheme() {
+    const mode = localStorage.getItem('fp.theme') || 'system';
+    const dark = mode === 'dark' || (mode === 'system' && themeMQ?.matches);
+    document.documentElement.classList.toggle('dk', !!dark);
+    document.querySelectorAll('meta[name=theme-color]').forEach(m => m.setAttribute('content', dark ? '#10b981' : '#059669'));
+    const btn = $('btnTheme');
+    if (btn) btn.textContent = mode === 'system' ? '🌓' : mode === 'dark' ? '🌙' : '☀️';
+  }
+  applyTheme();
+  themeMQ?.addEventListener?.('change', applyTheme);
+  $('btnTheme').addEventListener('click', () => {
+    const cur = localStorage.getItem('fp.theme') || 'system';
+    const next = cur === 'system' ? (themeMQ?.matches ? 'light' : 'dark') : cur === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('fp.theme', next);
+    applyTheme();
+    toast(next === 'dark' ? '🌙 Dark theme' : next === 'light' ? '☀️ Light theme' : '🌓 Following system theme');
+  });
+
+  // ---------- Settings dialog ----------
+  let GKEY = localStorage.getItem('fp.gkey') || '';
+  let gkeyDisabled = false; // set when Google rejects the key this session
+
+  $('btnSettings').addEventListener('click', () => {
+    $('setTheme').value = localStorage.getItem('fp.theme') || 'system';
+    $('setGkey').value = GKEY;
+    $('setStop').value = CFG.stopMin;
+    $('setSpeed').value = CFG.speed;
+    $('setMarkup').value = CFG.markup;
+    $('settingsDlg').showModal();
+  });
+  $('setClose').addEventListener('click', () => {
+    const prevKey = GKEY;
+    localStorage.setItem('fp.theme', $('setTheme').value);
+    GKEY = $('setGkey').value.trim();
+    localStorage.setItem('fp.gkey', GKEY);
+    if (GKEY !== prevKey) gkeyDisabled = false;
+    CFG.stopMin = Math.max(0, parseFloat($('setStop').value) || 0);
+    CFG.speed = Math.max(10, parseFloat($('setSpeed').value) || 42);
+    CFG.markup = Math.max(0, parseFloat($('setMarkup').value) || 0);
+    saveCfg();
+    applyTheme();
+    setPill('pillGoogle', GKEY ? 'Google Places: Key Set' : 'Google Places: Idle', GKEY ? 'ok' : '');
+    $('settingsDlg').close();
+    toast('⚙️ Settings saved (cost assumptions apply on next search)');
+  });
+
+  $('dataClearExcl').addEventListener('click', () => {
+    Object.keys(localStorage).filter(k => k.startsWith('fp.excl.')).forEach(k => localStorage.removeItem(k));
+    toast('Branch exclusions cleared');
+    if (lastState?.geo) recompute(lastState);
+  });
+  $('dataClearBook').addEventListener('click', () => {
+    setBook({});
+    updateBookPill();
+    toast('Price book cleared');
+    if (lastState) reprice(lastState);
+  });
+  $('dataClearHist').addEventListener('click', () => {
+    ['us', 'ca'].forEach(c => localStorage.removeItem(histKey(c)));
+    localStorage.removeItem('fp.trips');
+    toast('Price history & trips cleared');
+    if (lastState) render(lastState);
+  });
+  $('dataResetAll').addEventListener('click', () => {
+    Object.keys(localStorage).filter(k => k.startsWith('fp.')).forEach(k => localStorage.removeItem(k));
+    toast('All app data cleared — reloading');
+    setTimeout(() => location.reload(), 700);
+  });
+
+  // ---------- Small ask-value dialog ----------
+  function askValue(title, def) {
+    return new Promise(res => {
+      const d = $('askDlg');
+      $('askTitle').textContent = title;
+      const inp = $('askInput');
+      inp.value = def ?? '';
+      d.showModal();
+      const done = v => { try { d.close(); } catch {} res(v); };
+      $('askOk').onclick = () => done(inp.value.trim());
+      $('askCancel').onclick = () => done(null);
+    });
+  }
 
   // ---------- Interactive Map Initialization ----------
   let map = null, mapLayerGroup = null, routeLineLayer = null;
@@ -1036,24 +1113,26 @@
 
     let total = 0, exclN = 0;
     for (const c of chainsAll) {
+      const chainEx = isChainExcluded(c.name);
       for (const loc of c.locs) {
         total++;
         const key = locKey(loc);
         const stopNum = activeSet.get(key);
         const isRoute = stopNum != null;
         let pinColor = '#64748b', pinText = '•', zOff = 0;
-        if (loc.excluded) { pinColor = '#dc2626'; pinText = '✕'; zOff = -100; exclN++; }
+        if (loc.excluded || chainEx) { pinColor = '#dc2626'; pinText = '✕'; zOff = -100; exclN++; }
         else if (isRoute) { pinColor = '#059669'; pinText = String(stopNum); zOff = 600; }
         const m = L.marker([loc.lat, loc.lon], { icon: makePinIcon(pinColor, pinText), zIndexOffset: zOff });
         m.bindPopup(`
           <strong>${esc(loc.chain)}</strong>
           ${isRoute ? `<span style="background:#ecfdf5;color:#059669;border-radius:99px;padding:1px 8px;font-size:12px;font-weight:700">Stop #${stopNum}</span>` : ''}
-          ${loc.excluded ? '<span style="color:#dc2626;font-weight:700;font-size:12px">excluded</span>' : ''}<br>
+          ${(loc.excluded || chainEx) ? '<span style="color:#dc2626;font-weight:700;font-size:12px">excluded</span>' : ''}<br>
           <span style="color:#64748b">${esc(loc.label)}</span><br>
           <span style="font-size:12px;color:#475569">${confInfo(loc).txt} · source: <code>${esc(loc.source)}</code></span><br>
           Distance from home: <strong>${fmtDist(loc.dist)}</strong><br>
           <a href="${mapsLink(loc)}" target="_blank" rel="noopener">Google Maps ↗</a><br>
-          <button type="button" class="pop-btn js-toggle-loc" data-key="${esc(key)}">${loc.excluded ? '✅ Re-include this branch' : '🚫 Exclude this branch'}</button>
+          <button type="button" class="pop-btn js-toggle-loc" data-key="${esc(key)}">${loc.excluded ? '✅ Re-include branch' : '🚫 Exclude branch'}</button>
+          <button type="button" class="pop-btn js-toggle-chain" data-chain="${esc(c.name)}">${chainEx ? '✅ Re-include chain' : '🚫 Exclude chain'}</button>
         `);
         m.addTo(mapLayerGroup);
         allLatLngs.push([loc.lat, loc.lon]);
@@ -1063,52 +1142,115 @@
     S.mapBounds = L.latLngBounds(allLatLngs);
     map.invalidateSize();
     map.fitBounds(S.mapBounds, { padding: [32, 32], maxZoom: 14 });
-    $('mapSub').textContent = `${total} branches mapped (${exclN} excluded) across ${chainsAll.length} chains · tap a pin to exclude/untrust a wrong location`;
+    $('mapSub').textContent = `${total} branches mapped (${exclN} excluded) across ${chainsAll.length} chains · tap a pin to exclude a wrong branch or an entire chain`;
     drawRouteGeometry(home, activeStops);
   }
 
-  // ---------- Branch exclusion controls (delegated: works in popups & cards) ----------
+  // ---------- Branch / chain exclusion controls (delegated: works in popups & cards) ----------
   document.addEventListener('click', e => {
-    const b = e.target.closest('.js-toggle-loc');
-    if (!b || !lastState?.geo) return;
-    const key = b.dataset.key;
-    const set = getExcluded(lastState.loc.postal);
-    const wasExcluded = set.has(key);
-    if (wasExcluded) set.delete(key); else set.add(key);
-    setExcluded(lastState.loc.postal, set);
-    toast(wasExcluded ? '✅ Branch re-included — routes updated' : '🚫 Branch excluded — routes updated');
-    applyExclusions(lastState);
+    const bl = e.target.closest('.js-toggle-loc');
+    if (bl && lastState?.geo) {
+      const key = bl.dataset.key;
+      const set = getExcluded(lastState.loc.postal);
+      const wasExcluded = set.has(key);
+      if (wasExcluded) set.delete(key); else set.add(key);
+      setExcluded(lastState.loc.postal, set);
+      toast(wasExcluded ? '✅ Branch re-included — routes updated' : '🚫 Branch excluded — routes updated');
+      recompute(lastState);
+      return;
+    }
+    const bc = e.target.closest('.js-toggle-chain');
+    if (bc) {
+      const chain = bc.dataset.chain;
+      const set = getChainExcluded();
+      const was = set.has(chain);
+      if (was) set.delete(chain); else set.add(chain);
+      setChainExcluded(set);
+      toast(was ? `✅ ${chain} re-enabled — routes updated` : `🚫 ${chain} excluded — routes updated`);
+      if (lastState) recompute(lastState);
+      return;
+    }
+    // 📌 Save a flyer sale price into the price book
+    const bs = e.target.closest('.js-book-save');
+    if (bs) {
+      const price = parseFloat(bs.dataset.price);
+      if (!Number.isFinite(price)) return;
+      const b = getBook();
+      b[bookKey(bs.dataset.item, bs.dataset.store)] = { p: price, d: Date.now() };
+      setBook(b);
+      updateBookPill();
+      toast(`📌 Saved ${money(price)} for "${bs.dataset.item}" at ${bs.dataset.store}`);
+      if (lastState) reprice(lastState);
+      return;
+    }
+    // ✏️ Enter / edit a custom price book entry for item @ store
+    const be = e.target.closest('.js-book-edit');
+    if (be) {
+      const item = be.dataset.item, store = be.dataset.store;
+      const cur = getBook()[bookKey(item, store)];
+      askValue(`Your usual price for "${item}" at ${store}`, cur ? String(cur.p) : '').then(v => {
+        if (v === null) return; // cancelled
+        const b = getBook();
+        if (v === '') { delete b[bookKey(item, store)]; toast(`Removed "${item}" at ${store} from price book`); }
+        else {
+          const p = parseFloat(v);
+          if (!Number.isFinite(p) || p < 0) return toast('Enter a valid price', );
+          b[bookKey(item, store)] = { p, d: Date.now() };
+          toast(`📌 Saved ${money(p)} for "${item}" at ${store}`);
+        }
+        setBook(b);
+        updateBookPill();
+        if (lastState) reprice(lastState);
+      });
+    }
   });
 
   $('btnResetExcluded').addEventListener('click', () => {
     if (!lastState?.geo) return;
     setExcluded(lastState.loc.postal, new Set());
     toast('↩️ All excluded branches re-enabled');
-    applyExclusions(lastState);
+    recompute(lastState);
   });
 
-  // Re-derives active chains from chainsAll + exclusion set, re-optimizes, re-renders.
-  function applyExclusions(S) {
-    if (!S?.geo?.chainsAll) return;
-    const set = getExcluded(S.loc.postal);
-    for (const c of S.geo.chainsAll) {
-      c.locs.forEach(l => { l.excluded = set.has(locKey(l)); });
-    }
-    S.geo.chains = S.geo.chainsAll
-      .map(c => ({ ...c, locs: c.locs.filter(l => !l.excluded) }))
-      .filter(c => c.locs.length);
+  // Shared post-change pipeline: re-derive active chains, re-optimize routes, re-render.
+  function recompute(S) {
+    if (!S) return;
+    if (S.geo?.chainsAll) {
+      const set = getExcluded(S.loc.postal);
+      const chainEx = getChainExcluded();
+      for (const c of S.geo.chainsAll) {
+        c.locs.forEach(l => { l.excluded = set.has(locKey(l)); l.chainExcluded = chainEx.has(c.name); });
+      }
+      S.geo.chains = S.geo.chainsAll
+        .map(c => ({ ...c, locs: c.locs.filter(l => !l.excluded && !l.chainExcluded) }))
+        .filter(c => c.locs.length);
 
-    if (S.geoError && S.geoError.startsWith('All discovered branches')) S.geoError = '';
-    if (!S.geo.chains.length) {
-      S.geoError = 'All discovered branches are currently excluded. Re-enable them from the map popups or the branch lists in store cards.';
-      S.plans = null;
-    } else if (S.priced.length) {
-      try { S.plans = buildPlans(S); }
-      catch (e) { S.geoError = 'Route optimization error: ' + e.message; S.plans = null; }
-    } else {
-      S.plans = null;
+      if (S.geoError && S.geoError.startsWith('All discovered branches')) S.geoError = '';
+      if (!S.geo.chains.length) {
+        S.geoError = 'All discovered branches are currently excluded. Re-enable them from the map popups or the branch lists in store cards.';
+        S.plans = null;
+      } else if (S.priced.length) {
+        try { S.plans = buildPlans(S); }
+        catch (e) { S.geoError = 'Route optimization error: ' + e.message; S.plans = null; }
+      } else {
+        S.plans = null;
+      }
     }
     render(S);
+  }
+
+  // Re-applies the price book to already-fetched results (no network) and recomputes plans.
+  function reprice(S) {
+    if (!S) return;
+    for (const r of S.results || []) {
+      if (!Array.isArray(r.offers)) continue;
+      r.offers = r.offers.filter(o => !o.book);
+      r.at = new Map();
+      injectBookOffers(r);
+      r.byStore = new Map();
+      for (const o of r.offers) if (!r.byStore.has(o.merchant)) r.byStore.set(o.merchant, o);
+    }
+    recompute(S);
   }
 
   // ---------- Visual Builder & List Synchronization ----------
@@ -1135,7 +1277,7 @@
     const row = document.createElement('div');
     row.className = 'builder-row';
     row.innerHTML = `
-      <input type="text" class="b-name" placeholder="Item (e.g. milk)" value="${esc(name)}">
+      <input type="text" class="b-name" placeholder="Item (e.g. 2x milk)" value="${esc(name)}">
       <input type="text" class="b-size" placeholder="Size (e.g. 2 L)" value="${esc(size)}">
       <input type="text" class="b-price" placeholder="Usual $ (e.g. 4.99)" value="${esc(price.replace(/^\$\s*/, ''))}" inputmode="decimal">
       <button type="button" class="del" title="Remove item">✕</button>
@@ -1155,7 +1297,6 @@
     if (!lines.length) {
       addBuilderRow('milk', '2 L', '4.99');
       addBuilderRow('eggs', '', '4.29');
-      addBuilderRow('chicken breast', '1 kg', '13.99');
       addBuilderRow('bananas', '1 lb', '0.79');
       syncBuilderToTextarea();
       return;
@@ -1207,32 +1348,10 @@
     syncTextareaToBuilder();
   });
 
-  $('btnSample').addEventListener('click', () => {
-    if (!els.postal.value.trim()) {
-      delete els.postal.dataset.lat;
-      delete els.postal.dataset.lon;
-      els.postal.value = 'M5V 2T6';
-    }
-    els.list.value = [
-      'milk | 2 L | $4.99',
-      'eggs | | $4.29',
-      'butter | 454 g | $5.99',
-      'chicken breast | 1 kg | $13.99',
-      'bananas | 1 lb | $0.79',
-      'cheddar cheese | 400 g | $6.99',
-      'coffee | 300 g | $8.99'
-    ].join('\n');
-    syncTextareaToBuilder();
-    const p = parsePostal(els.postal.value);
-    if (p) applyCountry(p.country);
-    setStatus('Loaded sample shopping list. Click "Find Cheapest Deals & Nearest Stores" to run.');
-  });
-
   // ---------- Persistence & shareable-link import ----------
   els.postal.value = localStorage.getItem('fp.postal') || '';
   els.list.value = localStorage.getItem('fp.list') || '';
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem('fp.settings') || '{}'); } catch {}
+  let saved = loadJSON('fp.settings', {});
   // Shared link (#p=<postal>&l=<base64url list>) takes priority over local storage
   try {
     const h = new URLSearchParams(location.hash.replace(/^#/, ''));
@@ -1241,6 +1360,8 @@
     if (hl) els.list.value = b64d(hl);
   } catch {}
   syncTextareaToBuilder();
+  updateBookPill();
+  setPill('pillGoogle', GKEY ? 'Google Places: Key Set' : 'Google Places: Idle', GKEY ? 'ok' : '');
 
   // ---------- Shareable link export ----------
   els.btnShare.addEventListener('click', async () => {
@@ -1575,13 +1696,18 @@
     return out;
   }
 
+  // Supports "[qty x] name | size | $price" — quantity multiplies all downstream costs
   function parseList(text) {
     const seen = new Set(), out = [];
     for (const line of text.split('\n')) {
-      const [name, ...rest] = line.split('|').map(s => s.trim());
+      const [nameRaw, ...rest] = line.split('|').map(s => s.trim());
+      if (!nameRaw) continue;
+      let name = nameRaw, qty = 1;
+      const qm = /^(\d+(?:\.\d+)?)\s*[x×]\s*(.+)$/i.exec(name);
+      if (qm) { qty = Math.max(1, parseFloat(qm[1])); name = qm[2].trim(); }
       if (!name || seen.has(name.toLowerCase())) continue;
       seen.add(name.toLowerCase());
-      const it = { query: name, ref: null, price: null };
+      const it = { query: name, ref: null, price: null, qty };
       for (const p of rest) {
         if (/^\$?\s*\d+(?:\.\d+)?$/.test(p)) it.price = parseFloat(p.replace(/^\$\s*/, ''));
         else if (p) {
@@ -1592,6 +1718,28 @@
       out.push(it);
     }
     return out.slice(0, 40);
+  }
+
+  // ---------- Price Book injection (your saved prices compete with flyer offers) ----------
+  function injectBookOffers(r) {
+    if (!Array.isArray(r.offers)) return;
+    const book = getBook();
+    for (const [k, v] of Object.entries(book)) {
+      const sep = k.lastIndexOf(' @ ');
+      if (sep < 0) continue;
+      const item = k.slice(0, sep), store = k.slice(sep + 3);
+      if (item !== r.query || !(v.p > 0)) continue;
+      r.offers.push({
+        id: null, flyerId: null,
+        name: `My saved price${v.d ? ' (' + new Date(v.d).toLocaleDateString() + ')' : ''}`,
+        merchant: store,
+        price: v.p, orig: null, qty: 1, unit: v.p, pre: '', post: '', story: '',
+        validTo: null, image: '', sizeHint: '', desc: '',
+        perBase: null, basis: null, size: null, rate: null,
+        exact: false, cost: v.p, book: true
+      });
+    }
+    r.offers.sort((a, b) => a.cost - b.cost);
   }
 
   function chooseRef(offers, forced, loc) {
@@ -1607,10 +1755,12 @@
 
   function estimateRegular(offers, userPrice) {
     if (userPrice != null) return { cost: userPrice, source: 'you' };
-    if (!offers.length) return null;
-    const was = offers.filter(o => o.orig && o.qty === 1 && o.orig > o.price).map(o => o.cost * o.orig / o.price);
+    const fly = offers.filter(o => !o.book);
+    const base = fly.length ? fly : offers; // fall back to price-book-only if no flyer data
+    if (!base.length) return null;
+    const was = base.filter(o => o.orig && o.qty === 1 && o.orig > o.price).map(o => o.cost * o.orig / o.price);
     if (was.length) return { cost: median(was), source: 'was' };
-    return { cost: median(offers.map(o => o.cost)) * ASSUMED_MARKUP, source: 'assumed' };
+    return { cost: median(base.map(o => o.cost)) * markupMult(), source: 'assumed' };
   }
 
   async function processQuery(it, loc, opts) {
@@ -1621,11 +1771,15 @@
       o.exact = !!(ref && o.perBase != null && o.basis === ref.basis);
       o.cost = o.exact ? o.perBase * ref.amount : o.unit;
     }
-    offers.sort((a, b) => a.cost - b.cost);
-    const byStore = new Map();
-    for (const o of offers) if (!byStore.has(o.merchant)) byStore.set(o.merchant, o);
-    return { query: it.query, ref, offers, byStore, regular: estimateRegular(offers, it.price) };
+    const r = { query: it.query, qty: it.qty, ref, offers, byStore: new Map() };
+    injectBookOffers(r);
+    for (const o of r.offers) if (!r.byStore.has(o.merchant)) r.byStore.set(o.merchant, o);
+    r.regular = estimateRegular(offers, it.price);
+    return r;
   }
+
+  const q = r => (r.qty && r.qty > 0 ? r.qty : 1); // quantity multiplier for a list item
+  const lineCost = (r, a) => a ? a.cost * q(r) : null;
 
   function itemAt(r, store) {
     r.at ||= new Map();
@@ -1636,6 +1790,18 @@
     else if (r.regular) a = { kind: 'regular', cost: r.regular.cost, src: r.regular.source, over: o || null };
     r.at.set(store, a);
     return a;
+  }
+
+  // ---------- Price history / trend helpers ----------
+  const bestUnitCost = r => (r.offers?.length ? r.offers[0].cost : (r.regular?.cost ?? null));
+  function trendHtml(r, S) {
+    const prev = S?.prev?.[r.query];
+    const now = bestUnitCost(r);
+    if (!prev || !(now > 0)) return '';
+    const d = now - prev.p;
+    if (d < -0.01) return `<span class="tag">↓ ${money(-d)} vs last run</span>`;
+    if (d > 0.01) return `<span class="tag warn-tag">↑ ${money(d)} vs last run</span>`;
+    return `<span class="tag est">= same as last run</span>`;
   }
 
   // ---------- Multi-API Geography & Validated Store Discovery ----------
@@ -1663,8 +1829,8 @@
   // Multi-API Home Geocoder:
   // 1) Exact GPS if user clicked "Use GPS"
   // 2) Full postal code via Nominatim (especially important for 6-char Canadian postal codes!)
-  // 3) Full postal code via Photon (Komoot)
-  // 4) Zippopotam.us (5-digit US ZIP or 3-char Canadian FSA centroid)
+  // 3) Zippopotam.us (5-digit US ZIP or 3-char Canadian FSA centroid)
+  // 4) Photon (Komoot)
   async function getHome(loc) {
     const d = els.postal.dataset;
     if (d.lat && d.lon) {
@@ -1676,10 +1842,7 @@
       ? `${loc.postal.slice(0, 3)} ${loc.postal.slice(3)}`
       : loc.postal;
 
-    // For Canada, try full 6-character postal code first in Nominatim & Photon for block-level accuracy
-    const nominatimTries = loc.country === 'ca'
-      ? [formattedPostal, loc.postal]
-      : [loc.postal];
+    const nominatimTries = loc.country === 'ca' ? [formattedPostal, loc.postal] : [loc.postal];
 
     for (const pc of nominatimTries) {
       try {
@@ -1694,7 +1857,6 @@
       } catch {}
     }
 
-    // Try Zippopotam.us (exact for 5-digit US ZIP; FSA fallback for Canada)
     const zipKey = loc.country === 'ca' ? loc.postal.slice(0, 3) : loc.postal;
     try {
       const r = await fetch(`https://api.zippopotam.us/${loc.country}/${encodeURIComponent(zipKey)}`, { signal: timeoutSignal(4500) });
@@ -1708,7 +1870,6 @@
       }
     } catch {}
 
-    // Try Nominatim 3-char FSA for Canada if Zippopotam missed it
     if (loc.country === 'ca') {
       try {
         const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ca&postalcode=${encodeURIComponent(loc.postal.slice(0, 3))}`, { signal: timeoutSignal(5500) });
@@ -1720,10 +1881,9 @@
       } catch {}
     }
 
-    // Try Photon (Komoot) geocoder fallback
     try {
-      const q = `${formattedPostal}, ${loc.country === 'ca' ? 'Canada' : 'United States'}`;
-      const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=3`, { signal: timeoutSignal(5500) });
+      const qy = `${formattedPostal}, ${loc.country === 'ca' ? 'Canada' : 'United States'}`;
+      const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(qy)}&limit=3`, { signal: timeoutSignal(5500) });
       const j = await r.json();
       for (const f of (j?.features || [])) {
         const [lon, lat] = f.geometry?.coordinates || [];
@@ -1799,7 +1959,6 @@
     const cands = rawNames.map(norm).filter(Boolean);
     const combinedText = ' ' + cands.join(' ') + ' ';
 
-    // Check banner-specific negative keywords
     if (rule && rule.exclude.length) {
       for (const ex of rule.exclude) {
         const nex = norm(ex);
@@ -1967,6 +2126,63 @@
     }
   }
 
+  // API Source 4 (optional, user-supplied key): Google Places API (New) Text Search.
+  // Used as an additional store locator — results are name-validated like every other source.
+  async function queryGoogleForChain(chainName, home, radiusKm, key) {
+    const b = getBoundingBox(home, radiusKm);
+    const body = JSON.stringify({
+      textQuery: chainName,
+      maxResultCount: 10,
+      locationBias: {
+        rectangle: {
+          low: { latitude: b.south, longitude: b.west },
+          high: { latitude: b.north, longitude: b.east }
+        }
+      }
+    });
+    try {
+      const r = await fetch(GOOGLE_PLACES_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': key,
+          'X-Goog-FieldMask': 'places.displayName,places.location,places.formattedAddress,places.primaryType'
+        },
+        body,
+        signal: timeoutSignal(7000)
+      });
+      if (r.status === 400 || r.status === 403) {
+        if (!gkeyDisabled) {
+          gkeyDisabled = true;
+          setPill('pillGoogle', 'Google Places: Key Rejected', 'warn');
+          toast('⚠️ Google Places rejected your API key — check ⚙️ Settings');
+        }
+        return [];
+      }
+      if (!r.ok) return [];
+      const j = await r.json();
+      const out = [];
+      for (const p of (j.places || [])) {
+        const lat = p.location?.latitude, lon = p.location?.longitude;
+        const name = p.displayName?.text || '';
+        if (!name || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        if (hav(home, { lat, lon }) > radiusKm) continue;
+        const primaryType = String(p.primaryType || '').toLowerCase();
+        if (DISALLOWED_SHOP_TYPES.has(primaryType)) continue;
+        const el = {
+          lat, lon,
+          tags: { name, shop: primaryType || 'supermarket' },
+          label: p.formattedAddress || undefined,
+          source: 'Google'
+        };
+        if (scoreChainMatch(chainName, el) > 0) out.push(el);
+      }
+      return out;
+    } catch {
+      return [];
+    }
+  }
+
   // Reverse-address verification for self-reported (Flipp) coordinates:
   // confirms a retail POI actually exists within ~150 m of the claimed point.
   async function photonVerify(loc) {
@@ -2018,13 +2234,15 @@
   };
 
   function rankMerchants(results) {
+    const chainEx = getChainExcluded();
     const m = new Map();
     for (const r of results) {
       for (const [name, o] of r.byStore) {
         if (isOnlineOnlyMerchant(name)) continue;
+        if (chainEx.has(name)) continue; // respect chain-level exclusions
         const s = m.get(name) || { name, count: 0, value: 0 };
         s.count++;
-        if (r.regular) s.value += Math.max(0, r.regular.cost - o.cost);
+        if (r.regular) s.value += Math.max(0, r.regular.cost - o.cost) * q(r);
         m.set(name, s);
       }
     }
@@ -2043,7 +2261,6 @@
       if (dup) {
         const dupIsSelfReported = /Flipp/.test(dup.source) && !isOsmSource(dup.source);
         if (dupIsSelfReported && isOsmSource(loc.source)) {
-          // Trust community-verified OSM coordinates over self-reported ones
           dup.lat = loc.lat; dup.lon = loc.lon; dup.tags = loc.tags;
           dup.source = loc.source + '+Flipp';
           dup.d = hav(home, dup);
@@ -2103,7 +2320,7 @@
     // 3. For any merchant with 0 branches found yet, query Photon Spatial POI API in parallel
     const missingAfterOverpass = merchants.filter(m => byChain.get(m.name).length === 0).slice(0, 10);
     if (missingAfterOverpass.length) {
-      setStatus(`Querying Photon Spatial API for ${missingAfterOverpass.length} additional store chains…`, false, 72);
+      setStatus(`Querying Photon Spatial API for ${missingAfterOverpass.length} additional store chains…`, false, 70);
       await pool(missingAfterOverpass, 3, async m => {
         const ph = await queryPhotonForChain(m.name, home, radiusKm);
         if (ph.length) {
@@ -2111,6 +2328,22 @@
           sourcesUsed.add('Photon');
         }
       });
+    }
+
+    // 3.5 Optional Google Places source (only if the user supplied a key in Settings)
+    if (GKEY && !gkeyDisabled) {
+      const missingForGoogle = merchants.filter(m => byChain.get(m.name).length === 0).slice(0, 8);
+      if (missingForGoogle.length) {
+        setStatus(`Querying Google Places for ${missingForGoogle.length} remaining chains…`, false, 76);
+        await pool(missingForGoogle, 3, async m => {
+          const g = await queryGoogleForChain(m.name, home, radiusKm, GKEY);
+          if (g.length) {
+            byChain.get(m.name).push(...g);
+            sourcesUsed.add('Google');
+          }
+        });
+      }
+      if (sourcesUsed.has('Google')) setPill('pillGoogle', 'Google Places: Connected', 'ok');
     }
 
     // 4. For any still-missing top merchants, query Nominatim Bounded Viewbox API
@@ -2134,14 +2367,12 @@
     }
 
     // ---- Location trust verification pass ----
-    // OSM-sourced pins are 'verified'. Self-reported (Flipp) pins near an OSM pin of the
-    // same chain get upgraded to 'verified'; the rest get Photon reverse-address-checked.
     setStatus('Cross-verifying store locations against OpenStreetMap…', false, 84);
     const unverified = [];
     for (const c of chains) {
-      const osmLocs = c.locs.filter(l => isOsmSource(l.source));
+      const osmLocs = c.locs.filter(l => isOsmSource(l.source) || l.source === 'Google');
       for (const l of c.locs) {
-        if (isOsmSource(l.source)) {
+        if (isOsmSource(l.source) || l.source === 'Google') {
           l.conf = 'verified';
         } else if (osmLocs.some(o => hav(o, l) <= 0.35)) {
           l.conf = 'verified';
@@ -2179,12 +2410,13 @@
     }
     $('roadBadge').textContent = `Distances: ${provider}`;
 
-    // ---- Apply user's saved branch exclusions ----
+    // ---- Apply user's saved branch & chain exclusions ----
     const excl = getExcluded(postal);
-    for (const c of chains) c.locs.forEach(l => { l.excluded = excl.has(locKey(l)); });
+    const chainEx = getChainExcluded();
+    for (const c of chains) c.locs.forEach(l => { l.excluded = excl.has(locKey(l)); l.chainExcluded = chainEx.has(c.name); });
     const chainsAll = chains;
     const activeChains = chains
-      .map(c => ({ ...c, locs: c.locs.filter(l => !l.excluded) }))
+      .map(c => ({ ...c, locs: c.locs.filter(l => !l.excluded && !l.chainExcluded) }))
       .filter(c => c.locs.length);
 
     return { home, chains: activeChains, chainsAll, D, road, provider, sourcesUsed: [...sourcesUsed] };
@@ -2232,7 +2464,7 @@
       if (!improved) break;
     }
     const gas = route.dist * S.gasKm;
-    const hours = (route.dist / AVG_CITY_SPEED_KMH) + (plan.sel.length * STOP_OVERHEAD_HOURS);
+    const hours = (route.dist / CFG.speed) + (plan.sel.length * stopOverheadH());
     const timeCost = hours * (S.timeVal || 0);
     return { ...plan, picks, route, gas, timeCost, hours, dist: route.dist, total: plan.groceries + gas + timeCost };
   }
@@ -2240,9 +2472,9 @@
   function evaluate(S, sel) {
     const initialPicks = sel.map(c => c.locs[0]);
     const route = bestOrder(initialPicks.map(p => p.idx), S.geo.D);
-    const groceries = S.priced.reduce((s, r) => s + Math.min(...sel.map(c => itemAt(r, c.name).cost)), 0);
+    const groceries = S.priced.reduce((s, r) => s + Math.min(...sel.map(c => itemAt(r, c.name).cost)) * q(r), 0);
     const gas = route.dist * S.gasKm;
-    const hours = (route.dist / AVG_CITY_SPEED_KMH) + (sel.length * STOP_OVERHEAD_HOURS);
+    const hours = (route.dist / CFG.speed) + (sel.length * stopOverheadH());
     const timeCost = hours * (S.timeVal || 0);
     return refine(S, { sel, picks: initialPicks, route, groceries, gas, timeCost, hours, dist: route.dist, total: groceries + gas + timeCost });
   }
@@ -2314,7 +2546,7 @@
   const refLabel = ref => ref ? `${ref.user ? '' : '≈ '}${fmtAmount(ref.basis, ref.amount)}` : '';
   const SRC = {
     was: 'median of the flyers’ “was” prices',
-    assumed: `assumed ${Math.round((ASSUMED_MARKUP - 1) * 100)}% above typical flyer price`,
+    assumed: `assumed ${CFG.markup}% above typical flyer price`,
     you: 'your custom regular price'
   };
 
@@ -2325,6 +2557,7 @@
   }
 
   function perUnitHtml(o) {
+    if (o.book) return `<div class="pu">📌 my price book</div>`;
     if (o.perBase == null) return `<div class="muted">size unknown – compared by package</div>`;
     const b = o.basis === 'g' ? 'g' : 'mL';
     return `<div class="pu">${moneyP(o.perBase * 100)} / 100 ${b}</div><div class="muted">${moneyP(o.perBase)} / ${b}</div>`;
@@ -2339,19 +2572,23 @@
   function offerRow(o, best, r, S) {
     const size = o.size ? `Size ${fmtAmount(o.size.basis, o.size.amount)} <span class="muted">(from ${o.sizeFrom})</span>` : o.rate ? 'Sold by weight/volume' : '';
     const norm$ = (o.exact && r.ref && Math.abs(o.cost - o.unit) > 0.005) ? `<div class="muted">≈ ${money(o.cost)} for ${refLabel(r.ref)}</div>` : '';
-    const chainObj = S?.geo?.chains.find(c => c.name === o.merchant);
-    const nearLoc = chainObj?.locs?.[0];
+    const chainObj = S?.geo?.chainsAll?.find(c => c.name === o.merchant);
+    const nearLoc = chainObj?.locs?.find(l => !l.excluded && !l.chainExcluded) || chainObj?.locs?.[0];
     const distBadge = nearLoc ? `<span class="tag src-tag">📍 ${fmtDist(nearLoc.dist)} (${esc(nearLoc.label)})</span>` : '';
+    const bookBtn = o.book
+      ? ''
+      : `<button type="button" class="chip js-book-edit" data-item="${esc(r.query)}" data-store="${esc(o.merchant)}" title="Save your own price for this item at this store" style="padding:2px 8px; font-size:0.72rem">✏️ my price</button>`;
 
     return `<tr class="${best ? 'best' : ''}">
       <td class="thumb">${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</td>
-      <td><strong>${esc(o.merchant)}</strong> ${distBadge}
+      <td><strong>${esc(o.merchant)}</strong> ${o.book ? '<span class="tag book-tag">📌 price book</span>' : ''} ${distBadge}
           <div class="muted">${esc(o.name)}</div>
           ${size ? `<div class="muted">${size}</div>` : ''}
           ${o.story ? `<span class="tag">${esc(o.story)}</span>` : ''}</td>
       <td class="price">${priceLabel(o)}
           ${perUnitHtml(o)}${norm$}
-          <div class="muted">${o.validTo ? 'thru ' + fmtDate(o.validTo) : ''}</div></td>
+          <div class="muted">${o.validTo ? 'thru ' + fmtDate(o.validTo) : ''}</div>
+          ${bookBtn}</td>
     </tr>`;
   }
 
@@ -2372,18 +2609,19 @@
       let sale = 0, saleN = 0, reg = 0, regN = 0;
       const lines = S.priced.map(r => {
         const a = itemAt(r, name);
-        if (a.kind === 'sale') { sale += a.cost; saleN++; } else { reg += a.cost; regN++; }
+        if (a.kind === 'sale') { sale += lineCost(r, a); saleN++; } else { reg += lineCost(r, a); regN++; }
         return { r, a };
       });
       // Use the master (unfiltered) chain list so excluded branches remain manageable in the UI,
       // but only non-excluded branches qualify as the "nearest" for cost estimates.
       const chain = S.geo?.chainsAll?.find(c => c.name === name) || null;
-      const near = chain ? (chain.locs.find(l => !l.excluded) || null) : null;
+      const near = chain ? (chain.locs.find(l => !l.excluded && !l.chainExcluded) || null) : null;
       const tripKm = near ? D[0][near.idx] + D[near.idx][0] : null;
       return {
         name, lines, sale, saleN, reg, regN,
         total: sale + reg, near,
         allLocs: chain ? chain.locs : [],
+        chainExcluded: isChainExcluded(name),
         tripKm, tripGas: tripKm != null ? tripKm * S.gasKm : null
       };
     }).filter(s => s.saleN > 0);
@@ -2402,17 +2640,18 @@
   function storeCard(s, S) {
     const n = S.priced.length;
     const rows = s.lines.map(({ r, a }) => {
-      const rl = r.ref ? `<div class="muted">per ${refLabel(r.ref)}</div>` : '';
+      const rl = r.ref ? `<div class="muted">per ${refLabel(r.ref)}${q(r) > 1 ? ` × ${q(r)}` : ''}</div>` : (q(r) > 1 ? `<div class="muted">qty ${q(r)}</div>` : '');
       if (a.kind === 'sale') {
         const o = a.offer;
+        const bookTag = o.book ? ' <span class="tag book-tag">📌 my price</span>' : '';
         return `<tr><td>${esc(r.query)}${rl}<div class="muted">${esc(o.name)}</div></td>
-          <td class="price">${priceLabel(o)}${perUnitHtml(o)}</td>
-          <td class="price">${money(a.cost)}<div><span class="tag">on sale</span></div></td></tr>`;
+          <td class="price">${o.book ? '—' : priceLabel(o)}${o.book ? '' : perUnitHtml(o)}</td>
+          <td class="price">${money(lineCost(r, a))}${q(r) > 1 ? `<div class="muted">${money(a.cost)} ea × ${q(r)}</div>` : ''}<div><span class="tag">on sale</span>${bookTag}</div></td></tr>`;
       }
       const why = a.over ? `flyer price (${money(a.over.cost)}) is above est. regular` : 'no flyer offer found';
       return `<tr><td>${esc(r.query)}${rl}<div class="muted">${why}</div></td>
         <td class="price muted">—</td>
-        <td class="price est">≈ ${money(a.cost)}${estUnitHtml(r.ref, a.cost)}<div><span class="tag est">est. regular</span></div></td></tr>`;
+        <td class="price est">≈ ${money(lineCost(r, a))}${estUnitHtml(r.ref, a.cost)}<div><span class="tag est">est. regular</span></div></td></tr>`;
     }).join('');
 
     // Interactive branch manager: click a branch chip to exclude/re-include it from routing
@@ -2423,22 +2662,29 @@
           ${s.allLocs.map(l => {
             const k = locKey(l);
             const star = (s.near && l === s.near) ? '★ ' : '';
-            return `<button type="button" class="chip js-toggle-loc ${l.excluded ? 'off' : ''}" data-key="${esc(k)}" title="${esc(l.label)} (${esc(l.source)})">${star}${fmtDist(l.dist)} ${confMark(l)}</button>`;
+            const off = l.excluded || s.chainExcluded;
+            return `<button type="button" class="chip js-toggle-loc ${off ? 'off' : ''}" data-key="${esc(k)}" title="${esc(l.label)} (${esc(l.source)})">${star}${fmtDist(l.dist)} ${confMark(l)}</button>`;
           }).join('')}
         </div>
       </div>` : '';
 
-    return `<details class="card">
+    const chainBtn = s.chainExcluded
+      ? `<button type="button" class="chip js-toggle-chain" data-chain="${esc(s.name)}">↩️ Re-enable ${esc(s.name)} chain</button>`
+      : `<button type="button" class="chip js-toggle-chain" data-chain="${esc(s.name)}">🚫 Exclude ${esc(s.name)} chain</button>`;
+
+    return `<details class="card" ${s.chainExcluded ? 'style="opacity:0.6"' : ''}>
       <summary>
         <strong>${esc(s.name)}</strong>
-        <span class="muted">${s.near ? fmtDist(s.near.dist) + ' away (' + esc(s.near.source) + ')' : 'no active branch — check excluded branches below'} · ${s.saleN} of ${n} on sale</span>
+        <span class="muted">${s.chainExcluded ? 'chain excluded from routing' : (s.near ? fmtDist(s.near.dist) + ' away (' + esc(s.near.source) + ')' : 'no active branch — check excluded branches below')} · ${s.saleN} of ${n} on sale</span>
         <span class="sum-total">${money(s.total)}</span>
       </summary>
+      ${s.chainExcluded ? `<div class="muted" style="margin-top:8px">This entire chain is excluded from route planning. ${chainBtn}</div>` : ''}
       ${s.near ? `<div class="muted" style="margin-top:8px">Nearest active branch: <strong>${esc(s.near.label)}</strong> ${confBadge(s.near)} · <a href="${mapsLink(s.near)}" target="_blank" rel="noopener">Open in Maps ↗</a>
         · round trip ${fmtDist(s.tripKm)} ≈ ${money(s.tripGas)} gas → <strong>${money(s.total + s.tripGas)}</strong> all-in</div>` : ''}
+      <div class="staples-bar" style="margin-top:8px">${s.chainExcluded ? '' : chainBtn}</div>
       ${branchChips}
       <table><tr><th>Item</th><th class="price">Flyer price</th><th class="price">Cost here</th></tr>${rows}</table>
-      <p class="muted">On sale: ${money(s.sale)} (${s.saleN} item${s.saleN === 1 ? '' : 's'}) ·
+      <p class="muted">On sale / my prices: ${money(s.sale)} (${s.saleN} item${s.saleN === 1 ? '' : 's'}) ·
         Not on sale, est. regular: ${money(s.reg)} (${s.regN} item${s.regN === 1 ? '' : 's'}) ·
         <strong>Basket: ${money(s.total)}</strong></p>
     </details>`;
@@ -2472,7 +2718,7 @@
       <li><strong>${esc(x.stop.chain)}</strong> <span class="tag src-tag">${esc(x.stop.source)}</span> ${confBadge(x.stop)}
         <span class="muted">· ${fmtDist(L[i])} from ${i ? 'previous stop' : 'home'} · ${esc(x.stop.label)} · <a href="${mapsLink(x.stop)}" target="_blank" rel="noopener">map ↗</a></span>
         <div class="muted">Buy (${x.items.length}): ${x.items.length ? x.items.map(({ r, a }) =>
-          `<strong>${esc(r.query)}</strong> (${a.kind === 'sale' ? money(a.cost) : '≈ ' + money(a.cost) + ' est.'})`).join(', ') : '—'}</div></li>`).join('');
+          `<strong>${q(r) > 1 ? q(r) + '× ' : ''}${esc(r.query)}</strong> (${a.kind === 'sale' ? money(lineCost(r, a)) : '≈ ' + money(lineCost(r, a)) + ' est.'})`).join(', ') : '—'}</div></li>`).join('');
     return `<div class="card">
       <h3>${title}</h3>
       <ol class="route"><li>Start at home (${esc(S.geo.home.label || S.loc.postal)})</li>${rows}<li>Back home <span class="muted">· ${fmtDist(L[L.length - 1])}</span></li></ol>
@@ -2491,7 +2737,7 @@
       return;
     }
     const buckets = assignItems(S, plan);
-    const checkedSet = new Set(JSON.parse(localStorage.getItem('fp.checked') || '[]'));
+    const checkedSet = new Set(loadJSON('fp.checked', []));
 
     els.checklistSection.innerHTML = `
       <h2>✅ Active Shopping Trip Checklist</h2>
@@ -2506,16 +2752,20 @@
             ${b.items.map(({ r, a }) => {
               const key = `${b.stop.chain}|${r.query}`;
               const isChecked = checkedSet.has(key);
+              const bookBtn = (a.kind === 'sale' && !a.offer.book)
+                ? `<button type="button" class="chip js-book-save" data-item="${esc(r.query)}" data-store="${esc(b.stop.chain)}" data-price="${a.offer.unit ?? a.offer.cost}" title="Remember this price for future runs" style="padding:2px 8px; font-size:0.72rem">📌</button>`
+                : '';
               const detail = a.kind === 'sale'
                 ? `${esc(a.offer.name)} — <strong>${priceLabel(a.offer)}</strong>`
                 : `No flyer deal — est. regular <strong>${money(a.cost)}</strong>`;
               return `<label class="check-item ${isChecked ? 'checked' : ''}">
                 <input type="checkbox" data-checkkey="${esc(key)}" ${isChecked ? 'checked' : ''}>
                 <div style="flex:1">
-                  <strong>${esc(r.query)}</strong> ${r.ref ? `<span class="muted">(${refLabel(r.ref)})</span>` : ''}
+                  <strong>${q(r) > 1 ? q(r) + '× ' : ''}${esc(r.query)}</strong> ${r.ref ? `<span class="muted">(${refLabel(r.ref)})</span>` : ''} ${trendHtml(r, S)}
                   <div class="muted">${detail}</div>
                 </div>
-                <div style="font-weight:700; color:var(--accent)">${money(a.cost)}</div>
+                <div style="font-weight:700; color:var(--accent)">${money(lineCost(r, a))}</div>
+                ${bookBtn}
               </label>`;
             }).join('')}
           </div>
@@ -2526,9 +2776,9 @@
     els.checklistSection.querySelectorAll('input[type=checkbox]').forEach(cb => {
       cb.addEventListener('change', () => {
         const k = cb.dataset.checkkey;
-        const cur = new Set(JSON.parse(localStorage.getItem('fp.checked') || '[]'));
+        const cur = new Set(loadJSON('fp.checked', []));
         if (cb.checked) cur.add(k); else cur.delete(k);
-        localStorage.setItem('fp.checked', JSON.stringify([...cur]));
+        saveJSON('fp.checked', [...cur]);
         cb.closest('.check-item').classList.toggle('checked', cb.checked);
       });
     });
@@ -2536,10 +2786,57 @@
 
   function renderMissing(missing) {
     if (!missing.length) return '';
-    return `<div class="card"><h3>No flyer offers this week</h3>${missing.map(r =>
+    return `<div class="card"><h3>No offers found this week</h3>${missing.map(r =>
       `<div>${esc(r.query)} ${r.error ? `<span class="warn">– ${esc(r.error)}</span>` : ''}${r.regular
         ? `<span class="muted"> – using your price ${money(r.regular.cost)} at every store</span>` : ''}</div>`).join('')}
       <p class="muted">Try a simpler term (e.g. "butter" instead of "unsalted butter 454g") or untick strict matching.</p></div>`;
+  }
+
+  // ---------- Price Matrix (items × stores) ----------
+  function renderMatrix(S) {
+    const stores = S.stores.slice(0, 9);
+    if (!stores.length || !S.priced.length) {
+      return `<div class="card"><h3>🧮 Price Matrix</h3><p class="muted" style="margin:0">No comparable stores yet.</p></div>`;
+    }
+    const head = stores.map(s => `<th class="price">${esc(s.name)}<div class="muted" style="font-weight:400; text-transform:none">${s.near ? fmtDist(s.near.dist) : 'excluded'}</div></th>`).join('');
+    const body = S.priced.map(r => {
+      const cells = stores.map(s => {
+        const a = itemAt(r, s.name);
+        if (!a) return `<td class="price mx-miss">—</td>`;
+        const c = lineCost(r, a);
+        return `<td class="price" data-v="${c.toFixed(3)}">${a.kind === 'sale' ? (a.offer.book ? '📌 ' : '') + money(c) : '<span class="est">≈ ' + money(c) + '</span>'}</td>`;
+      }).join('');
+      return `<tr><td><strong>${q(r) > 1 ? q(r) + '× ' : ''}${esc(r.query)}</strong>${r.ref ? `<div class="muted">${refLabel(r.ref)}</div>` : ''} ${trendHtml(r, S)}</td>${cells}</tr>`;
+    }).join('');
+    const totals = stores.map(s => `<td class="price"><strong>${money(s.total)}</strong>${s.tripGas != null ? `<div class="muted">+${money(s.tripGas)} gas</div>` : ''}</td>`).join('');
+
+    return `<div class="card">
+      <h3>🧮 Price Matrix — where each item is cheapest</h3>
+      <p class="muted" style="margin-top:0">Green = cheapest source for that item. 📌 = your price book · ≈ = estimated regular price (no deal found).</p>
+      <div class="mx-scroll">
+        <table class="mx">
+          <tr><th>Item</th>${head}</tr>
+          ${body}
+          <tr><td><strong>Full basket</strong></td>${totals}</tr>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  // ---------- Trip history card ----------
+  function renderTripsCard() {
+    const trips = getTrips();
+    if (!trips.length) return '';
+    const cum = trips.reduce((s, t) => s + (t.saved || 0), 0);
+    const rows = trips.slice(0, 4).map(t =>
+      `<div class="trip-row"><span>${new Date(t.t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${esc(t.postal)}</span>
+       <span>${t.items} items · ${t.stores} stop${t.stores === 1 ? '' : 's'}</span>
+       <span><strong>${money(t.total)}</strong> <span class="muted">(saved ${money(t.saved || 0)})</span></span></div>`).join('');
+    return `<div class="card">
+      <h3>📈 Trip History</h3>
+      ${rows}
+      <div class="muted" style="margin-top:8px">Cumulative savings across ${trips.length} recorded trip${trips.length === 1 ? '' : 's'}: <strong style="color:var(--accent)">${money(cum)}</strong></div>
+    </div>`;
   }
 
   function applyViewTab(v) {
@@ -2549,9 +2846,10 @@
     });
     els.summary.style.display = (v === 'all') ? '' : 'none';
     els.checklistSection.style.display = (v === 'checklist' || v === 'all') ? '' : 'none';
-    const sb = $('storesBlock'), ib = $('itemsBlock');
+    const sb = $('storesBlock'), ib = $('itemsBlock'), mb = $('matrixBlock');
     if (sb) sb.style.display = (v === 'all' || v === 'stores') ? '' : 'none';
     if (ib) ib.style.display = (v === 'all' || v === 'items') ? '' : 'none';
+    if (mb) mb.style.display = (v === 'all' || v === 'matrix') ? '' : 'none';
   }
 
   function render(S) {
@@ -2561,20 +2859,19 @@
     const missing = results.filter(r => !r.offers.length);
 
     // Excluded-branch control state
-    const exclCount = S.geo ? S.geo.chainsAll.reduce((n, c) => n + c.locs.filter(l => l.excluded).length, 0) : 0;
+    const exclCount = S.geo ? S.geo.chainsAll.reduce((n, c) => n + c.locs.filter(l => l.excluded || l.chainExcluded).length, 0) : 0;
     const btnReset = $('btnResetExcluded');
     btnReset.style.display = exclCount ? '' : 'none';
     btnReset.textContent = `↩️ Reset excluded (${exclCount})`;
 
     if (!found.length) {
-      els.summary.innerHTML = `<div class="card err-card">No priced flyer matches found this week. Try simpler item names or uncheck Strict word matching.</div>`;
+      els.summary.innerHTML = `<div class="card err-card">No priced matches found this week. Try simpler item names or uncheck Strict word matching.</div>`;
       els.details.innerHTML = renderMissing(missing);
       return;
     }
 
     els.viewTabs.style.display = 'flex';
     els.btnCopyTrip.style.display = '';
-    els.btnCsv.style.display = '';
     els.btnPrint.style.display = '';
 
     S.stores = summarizeStores(S);
@@ -2584,14 +2881,14 @@
     const used = new Set();
     for (const r of S.priced) {
       const o = r.offers[0];
-      if (o && o.cost <= r.regular.cost) { around += o.cost; used.add(o.merchant); }
-      else around += r.regular.cost;
+      if (o && o.cost <= r.regular.cost) { around += o.cost * q(r); used.add(o.merchant); }
+      else around += r.regular.cost * q(r);
     }
     cards.push(`<div class="card">
       <h3>Cheapest cherry-picked</h3>
       <div class="num">${money(around)}</div>
       <div class="muted">ignoring travel distance</div>
-      <div style="margin-top:6px">${S.priced.length} item${S.priced.length === 1 ? '' : 's'} across ${used.size} chain${used.size === 1 ? '' : 's'}: <strong>${[...used].map(esc).join(', ') || '—'}</strong></div>
+      <div style="margin-top:6px">${S.priced.length} item${S.priced.length === 1 ? '' : 's'} across ${used.size} source${used.size === 1 ? '' : 's'}: <strong>${[...used].map(esc).join(', ') || '—'}</strong></div>
       <div class="muted">Total savings: ${money(Math.max(0, S.regularTotal - around))} (${Math.round(Math.max(0, 1 - around / S.regularTotal) * 100)}%)</div>
     </div>`);
 
@@ -2620,6 +2917,7 @@
       renderChecklist(S, null);
       updateMapForPlan(S, null);
     }
+    cards.push(renderTripsCard());
 
     const perDist = S.gasKm * (S.loc.country === 'us' ? KM_PER_MI : 1);
     const notice = S.geoError ? `<div class="card notice"><strong>Store location note:</strong> ${esc(S.geoError)}</div>` : '';
@@ -2627,7 +2925,8 @@
       <h2>Trip Summary &amp; Optimal Routes</h2>
       <div class="cards">${cards.join('')}</div>
       ${notice}
-      ${S.plans ? `<p class="muted" style="margin-top:10px">Gas is calculated at ${money(perDist)} per ${S.loc.country === 'us' ? 'mile' : 'km'}. Store locations were verified across <strong>${esc(S.geo.sourcesUsed.join(', '))}</strong> and routed via <strong>${esc(S.geo.provider)}</strong>. Locations marked ⚠️ are self-reported by the flyer and unverified — if one is wrong, tap its map pin and exclude it. Click any route card above to preview it on the map and update your checklist.</p>` : ''}`;
+      ${routeHtml}
+      ${S.plans ? `<p class="muted" style="margin-top:10px">Gas is calculated at ${money(perDist)} per ${S.loc.country === 'us' ? 'mile' : 'km'}. Store locations were verified across <strong>${esc(S.geo.sourcesUsed.join(', '))}</strong> and routed via <strong>${esc(S.geo.provider)}</strong>. Prices combine live flyers with <strong>your price book</strong>. Locations marked ⚠️ are self-reported by the flyer and unverified — if one is wrong, tap its map pin and exclude it. Click any route card above to preview it on the map and update your checklist.</p>` : ''}`;
 
     els.summary.querySelectorAll('.card.selectable').forEach(card => {
       card.addEventListener('click', () => {
@@ -2638,18 +2937,22 @@
 
     const shown = S.stores.slice(0, 12);
     els.details.innerHTML =
-      `<div id="storesBlock">
+      `<div id="matrixBlock">
+        <h2>Price Matrix</h2>
+        ${renderMatrix(S)}
+      </div>
+      <div id="storesBlock">
         <h2>Store-by-Store Basket Comparison</h2>
-        <p class="muted">Click any store to expand its full line-by-line basket, manage branch exclusions, and see all nearby branch addresses.</p>
+        <p class="muted">Click any store to expand its full line-by-line basket, manage branch &amp; chain exclusions, and see all nearby branch addresses.</p>
         ${shown.map(s => storeCard(s, S)).join('')}
         ${S.stores.length > shown.length ? `<p class="muted">Showing the top ${shown.length} of ${S.stores.length} stores.</p>` : ''}
       </div>
       <div id="itemsBlock">
-        <h2>Item-by-Item Flyer Offers</h2>
+        <h2>Item-by-Item Offers</h2>
         ${found.map(r => `
           <div class="card">
-            <h3>${esc(r.query)} <span class="muted">· ${r.offers.length} offer${r.offers.length === 1 ? '' : 's'} ·
-              ${r.ref ? `compared per ${refLabel(r.ref)}${r.ref.assumed ? ' (default unit)' : ''}` : 'compared per package'}</span></h3>
+            <h3>${q(r) > 1 ? q(r) + '× ' : ''}${esc(r.query)} <span class="muted">· ${r.offers.length} source${r.offers.length === 1 ? '' : 's'} ·
+              ${r.ref ? `compared per ${refLabel(r.ref)}${r.ref.assumed ? ' (default unit)' : ''}` : 'compared per package'}</span> ${trendHtml(r, S)}</h3>
             <table>${r.offers.slice(0, 7).map((o, i) => offerRow(o, i === 0, r, S)).join('')}</table>
             ${r.regular ? `<p class="muted">Est. regular price${r.ref ? ' for ' + refLabel(r.ref) : ''}: ${money(r.regular.cost)} (${SRC[r.regular.source]}).</p>` : ''}
           </div>`).join('')}
@@ -2677,7 +2980,7 @@
       for (const b of assignItems(lastState, plan)) {
         lines.push(`\n📍 ${b.stop.chain} — ${b.stop.label} (${fmtDist(b.stop.dist)})`);
         for (const { r, a } of b.items) {
-          lines.push(`  [ ] ${r.query}: ${money(a.cost)} (${a.kind === 'sale' ? a.offer.name : 'est. regular'})`);
+          lines.push(`  [ ] ${q(r) > 1 ? q(r) + 'x ' : ''}${r.query}: ${money(lineCost(r, a))} (${a.kind === 'sale' ? a.offer.name : 'est. regular'})`);
         }
       }
     }
@@ -2688,29 +2991,6 @@
     } catch {
       setStatus('Could not access the clipboard — select the checklist text manually.', true);
     }
-  });
-
-  els.btnCsv.addEventListener('click', () => {
-    if (!lastState) return;
-    const rows = [['Search Item', 'Store', 'Product Name', 'Flyer Price', 'Normalized Cost', 'Nearest Branch', 'Branch Distance (km)', 'Branch Verified']];
-    for (const r of lastState.results) {
-      for (const o of r.offers) {
-        const ch = lastState.geo?.chains.find(c => c.name === o.merchant);
-        const near = ch?.locs?.[0];
-        rows.push([
-          r.query, o.merchant, o.name, o.price, o.cost?.toFixed(2) || '',
-          near ? near.label : '', near ? near.dist.toFixed(2) : '',
-          near ? (near.conf || '') : ''
-        ]);
-      }
-    }
-    const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `flyer-deals-${lastState.loc.postal}.csv`;
-    a.click();
-    toast('⬇️ CSV exported');
   });
 
   // ---------- Main Execution Pipeline ----------
@@ -2761,7 +3041,7 @@
           return await processQuery(it, loc, opts);
         } catch (e) {
           return {
-            query: it.query, offers: [], byStore: new Map(), ref: null, error: e.message,
+            query: it.query, qty: it.qty, offers: [], byStore: new Map(), ref: null, error: e.message,
             regular: it.price != null ? { cost: it.price, source: 'you' } : null
           };
         } finally {
@@ -2774,9 +3054,21 @@
       const priced = results.filter(r => r.regular);
       const S = {
         loc, results, priced, gasKm, maxStops, timeVal,
-        geo: null, geoError: '', plans: null,
-        regularTotal: priced.reduce((s, r) => s + r.regular.cost, 0)
+        geo: null, geoError: '', plans: null, prev: {},
+        regularTotal: priced.reduce((s, r) => s + r.regular.cost * q(r), 0)
       };
+
+      // Capture previous best prices (for trend arrows), then update price history
+      const hk = histKey(loc.country);
+      const hist = loadJSON(hk, {});
+      for (const r of priced) {
+        const best = bestUnitCost(r);
+        if (best != null) {
+          S.prev[r.query] = hist[r.query] || null;
+          hist[r.query] = { p: best, d: Date.now() };
+        }
+      }
+      saveJSON(hk, hist);
 
       if (results.some(r => r.offers.length)) {
         try {
@@ -2784,7 +3076,7 @@
           const merchants = rankMerchants(results).slice(0, MAX_MERCHANTS);
           S.geo = await locateStoresMultiApi(home, merchants, radiusKm, loc.postal);
           if (!S.geo.chainsAll.length) {
-            S.geoError = `No physical branches for these flyer merchants were found within ${set.radius} ${loc.country === 'us' ? 'miles' : 'km'}. Try increasing your search radius.`;
+            S.geoError = `No physical branches for these merchants were found within ${set.radius} ${loc.country === 'us' ? 'miles' : 'km'}. Try increasing your search radius.`;
             S.geo = null;
           } else if (!S.geo.chains.length) {
             S.geoError = 'All discovered branches are currently excluded. Re-enable them from the map popups or the branch lists in store cards.';
@@ -2797,11 +3089,25 @@
         }
       }
 
+      // Record trip history entry
+      if (S.plans) {
+        const trips = getTrips();
+        trips.unshift({
+          t: Date.now(), postal: loc.postal,
+          total: S.plans.best.total,
+          saved: Math.max(0, S.regularTotal - S.plans.best.groceries),
+          items: S.priced.reduce((n, r) => n + q(r), 0),
+          stores: orderedStops(S.plans.best).length
+        });
+        saveJSON('fp.trips', trips.slice(0, MAX_TRIPS_KEPT));
+      }
+
       if (errors.length === results.length) {
         setStatus(errors[0].error, true, 0);
       } else {
-        setStatus(`Complete! Found live flyer offers for ${results.filter(r => r.offers.length).length} of ${items.length} items.`, false, 100);
+        setStatus(`Complete! Found offers for ${results.filter(r => r.offers.length).length} of ${items.length} items.`, false, 100);
       }
+      updateBookPill();
       render(S);
     } finally {
       els.go.disabled = false;
