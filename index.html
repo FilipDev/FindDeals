@@ -596,11 +596,11 @@
       <div style="margin-top:12px">
         <label class="inline">
           <input type="checkbox" id="strict" checked>
-          <span><strong>Strict word matching:</strong> require every search word in the product title (prevents "milk" matching "milk chocolate")</span>
+          <span><strong>Strict word matching:</strong> require every search word in the product title and filter out common false matches (prevents "milk" matching "milk chocolate" or "butter" matching "peanut butter")</span>
         </label>
         <label class="inline">
           <input type="checkbox" id="lookup" checked>
-          <span><strong>Deep package-size &amp; store coordinate inspection:</strong> fetch item detail endpoints to compute exact per-100g/mL prices and extract flyer store coordinates</span>
+          <span><strong>Deep package-size &amp; store coordinate inspection:</strong> fetch item detail endpoints to compute exact per-100g/mL prices and extract verified store addresses</span>
         </label>
       </div>
 
@@ -655,7 +655,7 @@
   <section id="details"></section>
 
   <footer>
-    <strong>Multi-API Architecture:</strong> Live flyer pricing via Flipp (`backflipp.wishabi.com`). Postal &amp; GPS geocoding via <strong>Zippopotam.us</strong>, <strong>Photon (Komoot)</strong>, <strong>Nominatim (OpenStreetMap)</strong>, and <strong>Open-Meteo</strong>. Physical store branch discovery combines <strong>Flipp Store Metadata</strong>, a <strong>3-mirror Overpass QL cluster</strong> (`overpass-api.de`, `kumi.systems`, `mail.ru`), <strong>Photon Spatial POI Search</strong> (`photon.komoot.io`), and <strong>Nominatim Bounded Search</strong>. Driving distance matrices and turn-by-turn road geometry use <strong>OSRM</strong> (`router.project-osrm.org`) and <strong>FOSSGIS Valhalla/OSRM</strong> (`routing.openstreetmap.de`).<br>
+    <strong>Multi-API Architecture:</strong> Live flyer pricing via Flipp (`backflipp.wishabi.com`). Postal &amp; GPS geocoding via <strong>Nominatim (OpenStreetMap)</strong>, <strong>Photon (Komoot)</strong>, and <strong>Zippopotam.us</strong>. Physical store branch discovery combines <strong>Flipp Store Metadata</strong>, a <strong>3-mirror Overpass QL cluster</strong> (`overpass-api.de`, `kumi.systems`, `mail.ru`), <strong>Photon Spatial POI Search</strong> (`photon.komoot.io`), and <strong>Nominatim Bounded Search</strong> with strict retail POI validation. Driving distance matrices and turn-by-turn road geometry use <strong>OSRM</strong> (`router.project-osrm.org`) and <strong>FOSSGIS OSRM</strong> (`routing.openstreetmap.de`).<br>
     Unofficial tool; not affiliated with Flipp or any retail chain. Always verify in-store unit sizes, loyalty card requirements, and quantity limits.
   </footer>
 </main>
@@ -663,7 +663,6 @@
 <script>
 (() => {
   // ---------- API Endpoints & Configuration ----------
-  // Tries direct Flipp API first, then local proxy (/flipp), then CORS fallback proxies if needed
   const FLIPP_BASES = [
     'https://backflipp.wishabi.com/flipp',
     '/flipp',
@@ -691,57 +690,102 @@
   const STOP_OVERHEAD_HOURS = 0.22; // ~13 mins parking/checkout per store stop when time-value > 0
   const AVG_CITY_SPEED_KMH = 42;
 
-  // Common North American flyer merchant name aliases -> OpenStreetMap brand/name equivalents
-  const CHAIN_ALIASES = {
-    'no frills': ['No Frills', 'NoFrills', "Hauler's No Frills"],
-    'real canadian superstore': ['Real Canadian Superstore', 'Superstore', 'Loblaws'],
-    'loblaws': ['Loblaws', 'Loblaw'],
-    'shoppers drug mart': ['Shoppers Drug Mart', 'Pharmaprix'],
-    'pharmaprix': ['Pharmaprix', 'Shoppers Drug Mart'],
-    'walmart': ['Walmart', 'Walmart Supercentre', 'Walmart Supercenter'],
-    'costco': ['Costco', 'Costco Wholesale'],
-    'metro': ['Metro', 'Metro Plus'],
-    'sobeys': ['Sobeys', 'Sobeys Extra'],
-    'safeway': ['Safeway'],
-    'freshco': ['FreshCo', 'Chalo! FreshCo'],
-    'food basics': ['Food Basics'],
-    'giant tiger': ['Giant Tiger', 'Tigre Géant'],
-    'maxi': ['Maxi', 'Maxi & Cie'],
-    'iga': ['IGA', 'IGA Extra'],
-    'super c': ['Super C'],
-    'provigo': ['Provigo'],
-    'zehrs': ['Zehrs', 'Zehrs Markets'],
-    'fortinos': ['Fortinos'],
-    'independent': ['Your Independent Grocer', 'Independent Grocer', 'Loblaws'],
-    'your independent grocer': ['Your Independent Grocer', 'Independent'],
-    'save on foods': ['Save-On-Foods', 'Save On Foods'],
-    't and t supermarket': ['T&T Supermarket', 'T&T'],
-    'kroger': ['Kroger', 'Kroger Marketplace'],
-    'aldi': ['ALDI', 'Aldi'],
-    'target': ['Target', 'SuperTarget'],
-    'meijer': ['Meijer'],
-    'publix': ['Publix'],
-    'h e b': ['H-E-B', 'HEB'],
-    'albertsons': ['Albertsons'],
-    'vons': ['Vons'],
-    'jewel osco': ['Jewel-Osco', 'Jewel'],
-    'stop and shop': ['Stop & Shop', 'Stop and Shop'],
-    'giant': ['Giant', 'Giant Food', 'Giant Eagle'],
-    'trader joe': ["Trader Joe's", 'Trader Joes'],
-    'whole foods': ['Whole Foods Market', 'Whole Foods'],
-    'food lion': ['Food Lion'],
-    'wegmans': ['Wegmans'],
-    'winco': ['WinCo Foods', 'WinCo'],
-    'fred meyer': ['Fred Meyer'],
-    'ralphs': ['Ralphs'],
-    'smiths': ["Smith's", 'Smiths Food and Drug'],
-    'fry': ["Fry's Food And Drug", "Fry's Marketplace", 'Frys'],
-    'hy vee': ['Hy-Vee'],
-    'shoprite': ['ShopRite'],
-    'hannaford': ['Hannaford'],
-    'cvs': ['CVS', 'CVS Pharmacy'],
-    'walgreens': ['Walgreens']
-  };
+  // Non-physical / online-only / manufacturer coupon portals on Flipp that have no retail grocery branches
+  const ONLINE_ONLY_MERCHANTS = new Set([
+    'instacart', 'voila', 'voila par iga', 'doordash', 'uber eats', 'ubereats', 'skip', 'skipthedishes',
+    'amazon', 'ebay', 'well ca', 'walmart ca', 'costco ca', 'save ca', 'websaver', 'checkout 51',
+    'caddle', 'flipp', 'p g', 'procter gamble', 'unilever', 'kellogg', 'kelloggs', 'nestle',
+    'general mills', 'kraft', 'pepsico', 'coca cola'
+  ]);
+
+  // Banner-specific alias & negative-keyword rules so distinct banners never cross-contaminate
+  // or match non-grocery businesses (e.g. Metro by T-Mobile, Giant Bicycles, Target Optical).
+  const CHAIN_RULES = [
+    { keys: ['no frills', 'nofrills'], aliases: ['No Frills', 'NoFrills'], exclude: [] },
+    { keys: ['real canadian superstore', 'superstore'], aliases: ['Real Canadian Superstore', 'Superstore', 'Atlantic Superstore'], exclude: ['loblaws', 'no frills'] },
+    { keys: ['loblaws', 'loblaw'], aliases: ['Loblaws', 'Loblaw'], exclude: ['no frills', 'superstore', 'independent', 'shoppers', 'maxi', 'provigo', 'zehrs', 'fortinos'] },
+    { keys: ['shoppers drug mart', 'shoppers', 'pharmaprix'], aliases: ['Shoppers Drug Mart', 'Pharmaprix'], exclude: ['food mart'] },
+    { keys: ['walmart', 'wal mart'], aliases: ['Walmart', 'Walmart Supercentre', 'Walmart Supercenter'], exclude: ['vision', 'optical', 'photo', 'tire', 'lube'] },
+    { keys: ['costco'], aliases: ['Costco', 'Costco Wholesale'], exclude: ['gas', 'fuel', 'optical', 'tire', 'hearing'] },
+    { keys: ['metro'], aliases: ['Metro', 'Metro Plus', 'Marché Metro'], exclude: ['t mobile', 'pcs', 'wireless', 'cellular', 'mobile', 'optical', 'optometry', 'cleaners', 'laundry', 'auto', 'motors', 'station', 'subway', 'transit', 'hotel', 'pizza', 'dental', 'clinic', 'medical', 'nails', 'hair', 'barber', 'liquor', 'wine', 'beer', 'storage', 'fitness', 'gym', 'dispensary', 'cannabis', 'food basics', 'super c'] },
+    { keys: ['sobeys'], aliases: ['Sobeys', 'Sobeys Extra', 'Sobeys Urban Fresh'], exclude: ['freshco', 'safeway', 'iga', 'foodland', 'farm boy'] },
+    { keys: ['safeway'], aliases: ['Safeway'], exclude: ['driving', 'insurance', 'auto', 'glass', 'storage', 'moving', 'tire'] },
+    { keys: ['freshco', 'chalo freshco'], aliases: ['FreshCo', 'Chalo! FreshCo', 'Chalo FreshCo'], exclude: [] },
+    { keys: ['food basics'], aliases: ['Food Basics'], exclude: [] },
+    { keys: ['giant tiger', 'tigre geant'], aliases: ['Giant Tiger', 'Tigre Géant'], exclude: [] },
+    { keys: ['maxi'], aliases: ['Maxi', 'Maxi & Cie'], exclude: ['cleaners', 'beauty', 'auto', 'taxi', 'storage'] },
+    { keys: ['iga'], aliases: ['IGA', 'IGA Extra', 'Marché IGA'], exclude: [] },
+    { keys: ['super c'], aliases: ['Super C'], exclude: [] },
+    { keys: ['provigo'], aliases: ['Provigo', 'Provigo Le Marché'], exclude: [] },
+    { keys: ['zehrs'], aliases: ['Zehrs', 'Zehrs Markets'], exclude: [] },
+    { keys: ['fortinos'], aliases: ['Fortinos'], exclude: [] },
+    { keys: ['your independent grocer', 'independent grocer', 'independent'], aliases: ['Your Independent Grocer', 'Independent Grocer'], exclude: ['optical', 'auto', 'insurance', 'bank', 'school', 'church', 'living', 'cinema', 'theatre'] },
+    { keys: ['save on foods', 'save on'], aliases: ['Save-On-Foods', 'Save On Foods'], exclude: [] },
+    { keys: ['t and t', 't t', 't&t'], aliases: ['T&T Supermarket', 'T&T'], exclude: ['auto', 'nails', 'hair', 'wireless', 'mobile'] },
+    { keys: ['farm boy'], aliases: ['Farm Boy'], exclude: [] },
+    { keys: ['longos', 'longo s', 'longo'], aliases: ["Longo's", 'Longos'], exclude: [] },
+    { keys: ['foodland'], aliases: ['Foodland'], exclude: [] },
+    { keys: ['rexall'], aliases: ['Rexall', 'Rexall Pharma Plus'], exclude: [] },
+    { keys: ['jean coutu'], aliases: ['Jean Coutu', 'PJC Jean Coutu'], exclude: [] },
+    { keys: ['canadian tire'], aliases: ['Canadian Tire'], exclude: ['gas', 'partsource'] },
+    { keys: ['kroger'], aliases: ['Kroger', 'Kroger Marketplace'], exclude: ['fuel', 'pharmacy'] },
+    { keys: ['aldi'], aliases: ['ALDI', 'Aldi'], exclude: [] },
+    { keys: ['lidl'], aliases: ['Lidl'], exclude: [] },
+    { keys: ['target'], aliases: ['Target', 'SuperTarget'], exclude: ['optical', 'auto', 'motors', 'archery', 'shooting', 'range', 'pest', 'cleaning', 'security', 'parking'] },
+    { keys: ['meijer'], aliases: ['Meijer'], exclude: ['gas', 'fuel'] },
+    { keys: ['publix'], aliases: ['Publix', 'Publix Super Market'], exclude: ['liquors'] },
+    { keys: ['h e b', 'heb'], aliases: ['H-E-B', 'HEB', 'H-E-B plus!'], exclude: ['wash', 'fuel'] },
+    { keys: ['albertsons'], aliases: ['Albertsons', 'Albertsons Market'], exclude: [] },
+    { keys: ['vons'], aliases: ['Vons', 'Vons Pavilions'], exclude: [] },
+    { keys: ['jewel osco', 'jewel'], aliases: ['Jewel-Osco', 'Jewel'], exclude: [] },
+    { keys: ['stop and shop', 'stop shop'], aliases: ['Stop & Shop', 'Stop and Shop'], exclude: ['gas', 'fuel'] },
+    { keys: ['giant eagle'], aliases: ['Giant Eagle', 'Giant Eagle Market District'], exclude: ['getgo', 'tiger', 'bicycle', 'bikes'] },
+    { keys: ['giant food', 'giant'], aliases: ['Giant', 'Giant Food', 'The Giant Company'], exclude: ['tiger', 'tigre', 'eagle', 'bicycle', 'bicycles', 'bikes', 'cycling', 'auto', 'motors', 'tire', 'fitness', 'storage', 'oil'] },
+    { keys: ['trader joe', 'trader joes'], aliases: ["Trader Joe's", 'Trader Joes'], exclude: [] },
+    { keys: ['whole foods'], aliases: ['Whole Foods Market', 'Whole Foods'], exclude: [] },
+    { keys: ['food lion'], aliases: ['Food Lion'], exclude: [] },
+    { keys: ['wegmans'], aliases: ['Wegmans'], exclude: [] },
+    { keys: ['winco'], aliases: ['WinCo Foods', 'WinCo'], exclude: [] },
+    { keys: ['fred meyer'], aliases: ['Fred Meyer'], exclude: ['jewelers', 'fuel'] },
+    { keys: ['ralphs'], aliases: ['Ralphs', 'Ralphs Fresh Fare'], exclude: [] },
+    { keys: ['smiths', 'smith s'], aliases: ["Smith's", "Smith's Food and Drug", 'Smiths'], exclude: ['auto', 'funeral', 'machine'] },
+    { keys: ['frys', 'fry s'], aliases: ["Fry's Food And Drug", "Fry's Marketplace", "Fry's"], exclude: ['electronics'] },
+    { keys: ['hy vee', 'hyvee'], aliases: ['Hy-Vee'], exclude: ['gas', 'fast & fresh'] },
+    { keys: ['shoprite'], aliases: ['ShopRite'], exclude: ['liquors', 'wines'] },
+    { keys: ['hannaford'], aliases: ['Hannaford'], exclude: [] },
+    { keys: ['harris teeter'], aliases: ['Harris Teeter'], exclude: [] },
+    { keys: ['sprouts'], aliases: ['Sprouts Farmers Market', 'Sprouts'], exclude: [] },
+    { keys: ['smart and final', 'smart final'], aliases: ['Smart & Final', 'Smart & Final Extra!'], exclude: [] },
+    { keys: ['market basket'], aliases: ['Market Basket'], exclude: [] },
+    { keys: ['shaw s', 'shaws'], aliases: ["Shaw's", 'Shaws'], exclude: [] },
+    { keys: ['acme'], aliases: ['ACME Markets', 'ACME'], exclude: ['brick', 'auto', 'printing', 'glass', 'storage'] },
+    { keys: ['cvs'], aliases: ['CVS', 'CVS Pharmacy', 'CVS/pharmacy'], exclude: [] },
+    { keys: ['walgreens'], aliases: ['Walgreens'], exclude: [] },
+    { keys: ['rite aid'], aliases: ['Rite Aid'], exclude: [] },
+    { keys: ['dollar general'], aliases: ['Dollar General', 'DG Market'], exclude: [] },
+    { keys: ['family dollar'], aliases: ['Family Dollar'], exclude: [] },
+    { keys: ['dollarama'], aliases: ['Dollarama'], exclude: [] },
+    { keys: ['sams club', 'sam s club'], aliases: ["Sam's Club", 'Sams Club'], exclude: ['fuel', 'gas'] },
+    { keys: ['bjs', 'bj s'], aliases: ["BJ's Wholesale Club", "BJ's"], exclude: ['restaurant', 'brewhouse', 'gas'] }
+  ];
+
+  // Disallowed OSM shop/amenity categories so non-grocery businesses with similar names never match
+  const DISALLOWED_SHOP_TYPES = new Set([
+    'bicycle', 'car', 'car_repair', 'car_parts', 'tyres', 'motorcycle', 'boat', 'trailer',
+    'mobile_phone', 'telecommunication', 'optician', 'hairdresser', 'beauty', 'nails', 'tattoo',
+    'massage', 'dry_cleaning', 'laundry', 'tailor', 'clothes', 'shoes', 'fashion', 'Withdrawn',
+    'jewelry', 'watches', 'bag', 'travel_agency', 'real_estate', 'insurance', 'funeral_directors',
+    'copyshop', 'printing', 'storage_rental', 'vacant', 'cannabis', 'e-cigarette', 'tobacco',
+    'weapons', 'ticket', 'bookmaker', 'lottery', 'pawnbroker', 'money_lender', 'erotic',
+    'music', 'musical_instrument', 'art', 'frame', 'craft', 'antiques', 'carpet', 'curtain',
+    'doors', 'flooring', 'glaziery', 'tiles', 'window_blind', 'swimming_pool', 'hearing_aids',
+    'Outpost', 'locksmith', 'security', 'signmaker', ' psychic', 'religion'
+  ]);
+
+  const DISALLOWED_OSM_CLASSES = new Set([
+    'highway', 'railway', 'public_transport', 'waterway', 'natural', 'place', 'boundary',
+    'landuse', 'aeroway', 'historic', 'military', 'office', 'leisure', 'tourism', 'man_made'
+  ]);
 
   const DEFAULTS = {
     us: { fuel: 3.45, eff: 25, radius: 10, lFuel: 'Gas ($ / gal)', lEff: 'Economy (mpg)', lRadius: 'Radius (mi)' },
@@ -795,6 +839,7 @@
   // ---------- Interactive Map Initialization ----------
   let map = null, mapLayerGroup = null, routeLineLayer = null;
   let lastState = null;
+  let activeView = 'all';
 
   function initMap() {
     if (map || typeof L === 'undefined') return;
@@ -809,7 +854,10 @@
   initMap();
 
   $('btnFitMap').addEventListener('click', () => {
-    if (lastState?.mapBounds && map) map.fitBounds(lastState.mapBounds, { padding: [32, 32] });
+    if (lastState?.mapBounds && map) {
+      map.invalidateSize();
+      map.fitBounds(lastState.mapBounds, { padding: [32, 32] });
+    }
   });
 
   function makePinIcon(color, label = '') {
@@ -882,8 +930,9 @@
     }
 
     S.mapBounds = L.latLngBounds(allLatLngs);
+    map.invalidateSize();
     map.fitBounds(S.mapBounds, { padding: [32, 32], maxZoom: 14 });
-    $('mapSub').textContent = `${chains.reduce((n, c) => n + c.locs.length, 0)} store branches mapped across ${chains.length} chains`;
+    $('mapSub').textContent = `${chains.reduce((n, c) => n + c.locs.length, 0)} verified store branches mapped across ${chains.length} chains`;
     drawRouteGeometry(home, activeStops);
   }
 
@@ -913,7 +962,7 @@
     row.innerHTML = `
       <input type="text" class="b-name" placeholder="Item (e.g. milk)" value="${esc(name)}">
       <input type="text" class="b-size" placeholder="Size (e.g. 2 L)" value="${esc(size)}">
-      <input type="text" class="b-price" placeholder="Usual $ (e.g. 4.99)" value="${esc(price.replace(/^\$/, ''))}">
+      <input type="text" class="b-price" placeholder="Usual $ (e.g. 4.99)" value="${esc(price.replace(/^\$\s*/, ''))}">
       <button type="button" class="del" title="Remove item">✕</button>
     `;
     row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncBuilderToTextarea));
@@ -941,7 +990,7 @@
       const name = parts[0] || '';
       let size = '', price = '';
       for (const p of parts.slice(1)) {
-        if (/^\$?\d+(?:\.\d+)?$/.test(p)) price = p.replace('$', '');
+        if (/^\$?\s*\d+(?:\.\d+)?$/.test(p)) price = p.replace(/^\$\s*/, '');
         else if (p) size = p;
       }
       addBuilderRow(name, size, price);
@@ -984,7 +1033,11 @@
   });
 
   $('btnSample').addEventListener('click', () => {
-    if (!els.postal.value.trim()) els.postal.value = 'M5V 2T6';
+    if (!els.postal.value.trim()) {
+      delete els.postal.dataset.lat;
+      delete els.postal.dataset.lon;
+      els.postal.value = 'M5V 2T6';
+    }
     els.list.value = [
       'milk | 2 L | $4.99',
       'eggs | | $4.29',
@@ -1055,14 +1108,13 @@
       els.postal.dataset.lat = lat;
       els.postal.dataset.lon = lon;
       try {
-        // Try Nominatim reverse, fallback to BigDataCloud / Photon reverse
         let pc = null;
         try {
           const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${lat}&lon=${lon}`, { signal: timeoutSignal(6000) });
           pc = (await r.json())?.address?.postcode;
         } catch {}
         if (!pc) {
-          const r2 = await fetch(`https:// photon.komoot.io/reverse?lon=${lon}&lat=${lat}`, { signal: timeoutSignal(6000) });
+          const r2 = await fetch(`https://photon.komoot.io/reverse?lon=${lon}&lat=${lat}`, { signal: timeoutSignal(6000) });
           pc = (await r2.json())?.features?.[0]?.properties?.postcode;
         }
         if (!pc) throw new Error('No postcode');
@@ -1117,7 +1169,7 @@
   const reMulti3 = new RegExp(String.raw`(\d+)\s*(?:pk|pack|ct|count|pcs?)\.?\s*(?:of\s*)?${NUM}\s*(${UNIT})\b`, 'i');
   const reSingle = new RegExp(String.raw`${NUM}\s*(${UNIT})\b`, 'i');
   const reRate1 = new RegExp(String.raw`^\s*\$?\s*(?:/|per\s+)\s*${NUM}?\s*(${UNIT})\b`, 'i');
-  const reRate2 = new RegExp(String.raw`^\s*(${UNIT})\b`, 'i');
+  const reRate2 = new RegExp(String.raw`^\s*${NUM}?\s*(${UNIT})\b`, 'i');
 
   function baseUnit(raw, ctx) {
     const k = raw.toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ');
@@ -1142,10 +1194,10 @@
 
   function parseRate(text, ctx) {
     if (!text) return null;
-    const t = String(text);
+    const t = cleanNums(String(text));
     let m, qty = 1, unit;
     if ((m = reRate1.exec(t))) { qty = m[1] ? +m[1] : 1; unit = m[2]; }
-    else if ((m = reRate2.exec(t))) { unit = m[1]; }
+    else if ((m = reRate2.exec(t))) { qty = m[1] ? +m[1] : 1; unit = m[2]; }
     else return null;
     const u = baseUnit(unit, ctx);
     return u && qty > 0 ? { basis: u[0], amount: qty * u[1] } : null;
@@ -1170,19 +1222,22 @@
     return o;
   }
 
-  // Registry of store coordinates discovered directly inside Flipp responses
-  const flippStoreCoords = new Map(); // merchantName -> [{lat, lon, label, source:'Flipp'}]
+  // Registry of verified physical store coordinates discovered inside Flipp responses.
+  // Only records coordinates when accompanied by an explicit street address (prevents regional centroids).
+  const flippStoreCoords = new Map();
 
   function recordFlippCoords(merchant, obj) {
     if (!obj || !merchant) return;
+    const street = (obj.street_address || obj.address || '').trim();
+    if (!street || street.length < 4 || !/\d/.test(street)) return;
     const lat = parseFloat(obj.latitude ?? obj.lat ?? obj.store_latitude);
     const lon = parseFloat(obj.longitude ?? obj.lng ?? obj.lon ?? obj.store_longitude);
     if (Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) > 1 && Math.abs(lon) > 1) {
-      const addr = [obj.address, obj.street_address, obj.city].filter(Boolean).join(', ') || `${merchant} (Flipp Store)`;
+      const addr = [street, obj.city].filter(Boolean).join(', ');
       if (!flippStoreCoords.has(merchant)) flippStoreCoords.set(merchant, []);
       const list = flippStoreCoords.get(merchant);
       if (!list.some(x => Math.hypot(x.lat - lat, x.lon - lon) < 0.002)) {
-        list.push({ lat, lon, label: addr, source: 'Flipp', tags: { name: merchant } });
+        list.push({ lat, lon, label: addr, source: 'Flipp', tags: { name: merchant, shop: 'supermarket' } });
       }
     }
   }
@@ -1191,7 +1246,7 @@
     const price = parseFloat(raw.current_price);
     const orig = parseFloat(raw.original_price);
     const pre = (raw.pre_price_text || '').trim();
-    const m = /^(\d+)\s*(?:\/|for)$/i.exec(pre);
+    const m = /^(\d+)\s*(?:\/|for)\b/i.exec(pre);
     const qty = m ? Math.max(1, +m[1]) : 1;
     const img = raw.clean_image_url || raw.cutout_image_url || '';
     const merchant = (raw.merchant_name || raw.merchant || 'Unknown store').trim();
@@ -1216,10 +1271,52 @@
     });
   }
 
-  const stem = w => (w.length > 3 ? w.replace(/(ies|es|s)$/, m => m === 'ies' ? 'y' : '') : w);
+  // Context-aware word stemmer & false-friend guard for strict product matching
+  function stem(w) {
+    if (w.length <= 3) return w;
+    if (w.endsWith('ies') && w.length > 4) return w.slice(0, -3) + 'y';
+    if (/(?:ches|shes|xes|zes|ses|oes)$/.test(w)) return w.slice(0, -2);
+    if (w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+    return w;
+  }
+
+  const FALSE_PRODUCT_FRIENDS = [
+    { trigger: 'milk', bad: ['chocolate', 'candy', 'bar', 'bone', 'dog', 'biscuit', 'condensed', 'evaporated', 'coconut', 'almond', 'oat', 'soy', 'thistle', 'lotion', ' cleanser', 'bath'] },
+    { trigger: 'butter', bad: ['peanut', 'almond', 'cashew', 'chicken', 'tart', 'pecan', 'cookie', 'croissant', 'body', 'lotion', 'cocoa', 'shea', 'popcorn', 'butternut', 'butterfly'] },
+    { trigger: 'egg', bad: ['chocolate', 'cadbury', 'kinder', 'easter', 'mini', 'noodle', 'roll', 'waffle', 'eggo', 'eggplant', 'nog', 'eggnog', 'pasta'] },
+    { trigger: 'cheese', bad: ['macaroni', 'cracker', 'cheesecake', 'cake', 'puff', 'curl', 'nachos', 'sauce', 'dog', 'cat', 'flavoured', 'flavored', 'burger'] },
+    { trigger: 'chicken', bad: ['broth', 'stock', 'bouillon', 'soup', 'noodle', 'ramen', 'sauce', 'gravy', 'cat', 'dog', 'pet', 'whiskas', 'purina', 'friskies', 'fancy feast', 'chips'] },
+    { trigger: 'beef', bad: ['broth', 'stock', 'bouillon', 'soup', 'ramen', 'noodle', 'gravy', 'cat', 'dog', 'pet', 'purina', 'friskies', 'fancy feast', 'jerky'] },
+    { trigger: 'coffee', bad: ['creamer', 'coffee mate', 'coffeemate', 'crisp', 'filter', 'cake', 'table', 'mug', 'maker', 'machine'] },
+    { trigger: 'apple', bad: ['juice', 'cider', 'vinegar', 'sauce', 'applesauce', 'pie', 'turnover', 'strudel', 'candy', 'caramel', 'cinnamon', 'wash', 'shampoo', ' pineapple'] },
+    { trigger: 'banana', bad: ['bread', 'muffin', 'chips', 'pudding', 'boat', 'sunscreen', 'pepper', 'peppers'] },
+    { trigger: 'bread', bad: ['crumb', 'breadcrumbs', 'pudding', 'gingerbread', 'shortbread', 'pan', 'knife', 'toaster'] }
+  ];
+
   function matches(query, name) {
-    const hay = name.toLowerCase();
-    return query.toLowerCase().split(/\s+/).filter(Boolean).every(w => hay.includes(stem(w)));
+    const qLower = query.toLowerCase();
+    const hayTokens = name.toLowerCase().replace(/[^a-z0-9\u00C0-\u024F]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+    const hayStems = new Set(hayTokens.map(stem));
+    const hayStr = ' ' + hayTokens.join(' ') + ' ';
+
+    const qWords = qLower.replace(/[^a-z0-9\u00C0-\u024F]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+    const allPresent = qWords.every(w => {
+      const sw = stem(w);
+      return hayTokens.includes(w) || hayStems.has(sw) || hayTokens.some(t => t.startsWith(sw) && t.length <= sw.length + 2);
+    });
+    if (!allPresent) return false;
+
+    const qStems = qWords.map(stem);
+    for (const rule of FALSE_PRODUCT_FRIENDS) {
+      if (qStems.includes(rule.trigger)) {
+        for (const badWord of rule.bad) {
+          if (!qLower.includes(badWord) && hayStr.includes(' ' + badWord + ' ')) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 
   async function findOffers(query, loc, strict) {
@@ -1279,7 +1376,7 @@
       seen.add(name.toLowerCase());
       const it = { query: name, ref: null, price: null };
       for (const p of rest) {
-        if (/^\$?\s*\d+(?:\.\d+)?$/.test(p)) it.price = parseFloat(p.replace('$', ''));
+        if (/^\$?\s*\d+(?:\.\d+)?$/.test(p)) it.price = parseFloat(p.replace(/^\$\s*/, ''));
         else if (p) {
           const s = parseSize(p, `${name} ${p}`);
           if (s) it.ref = { ...s, user: true };
@@ -1334,25 +1431,33 @@
     return a;
   }
 
-  // ---------- Multi-API Geography & Store Discovery ----------
+  // ---------- Multi-API Geography & Validated Store Discovery ----------
   const hav = (a, b) => {
     const R = 6371, rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLon = (b.lon - a.lon) * rad;
     const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(x));
   };
 
+  // Preserves words like "market" when needed, strips corporate noise & diacritics
   const norm = s => String(s || '')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/\b(flyer|supermarket|grocery|markets?|stores?|inc|ltd|canada|us)\b/g, ' ')
+    .replace(/['’`]/g, '')
+    .replace(/\b(flyer|weekly|supermarket|grocery|inc|ltd|llc|corp|company|canada|usa|us)\b/g, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
+  function isWithinCountryBounds(lat, lon, c) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+    if (c === 'ca') return lat >= 41.5 && lat <= 84 && lon >= -141.5 && lon <= -52;
+    return lat >= 18 && lat <= 72 && lon >= -179 && lon <= -64;
+  }
+
   // Multi-API Home Geocoder:
   // 1) Exact GPS if user clicked "Use GPS"
-  // 2) Zippopotam.us (fast postal code API for US ZIP & Canadian FSA)
-  // 3) Nominatim OpenStreetMap postal search
-  // 4) Photon (Komoot) geocoder fallback
+  // 2) Full postal code via Nominatim (especially important for 6-char Canadian postal codes!)
+  // 3) Full postal code via Photon (Komoot)
+  // 4) Zippopotam.us (5-digit US ZIP or 3-char Canadian FSA centroid)
   async function getHome(loc) {
     const d = els.postal.dataset;
     if (d.lat && d.lon) {
@@ -1360,44 +1465,65 @@
       return { lat: +d.lat, lon: +d.lon, label: `GPS (${(+d.lat).toFixed(4)}, ${(+d.lon).toFixed(4)})` };
     }
 
-    const zipCode = loc.country === 'ca' ? loc.postal.slice(0, 3) : loc.postal;
-    // Try Zippopotam.us first (extremely fast, no rate-limit issues)
+    const formattedPostal = loc.country === 'ca'
+      ? `${loc.postal.slice(0, 3)} ${loc.postal.slice(3)}`
+      : loc.postal;
+
+    // For Canada, try full 6-character postal code first in Nominatim & Photon for block-level accuracy
+    const nominatimTries = loc.country === 'ca'
+      ? [formattedPostal, loc.postal]
+      : [loc.postal];
+
+    for (const pc of nominatimTries) {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=${loc.country}&postalcode=${encodeURIComponent(pc)}`, { signal: timeoutSignal(5500) });
+        if (r.ok) {
+          const j = await r.json();
+          if (j?.[0] && isWithinCountryBounds(+j[0].lat, +j[0].lon, loc.country)) {
+            setPill('pillGeo', 'Geocoder: Nominatim', 'ok');
+            return { lat: +j[0].lat, lon: +j[0].lon, label: j[0].display_name.split(',').slice(0, 2).join(', ') };
+          }
+        }
+      } catch {}
+    }
+
+    // Try Zippopotam.us (exact for 5-digit US ZIP; FSA fallback for Canada)
+    const zipKey = loc.country === 'ca' ? loc.postal.slice(0, 3) : loc.postal;
     try {
-      const r = await fetch(`https://api.zippopotam.us/${loc.country}/${encodeURIComponent(zipCode)}`, { signal: timeoutSignal(4500) });
+      const r = await fetch(`https://api.zippopotam.us/${loc.country}/${encodeURIComponent(zipKey)}`, { signal: timeoutSignal(4500) });
       if (r.ok) {
         const j = await r.json();
         const pl = j?.places?.[0];
-        if (pl && pl.latitude && pl.longitude) {
+        if (pl && isWithinCountryBounds(+pl.latitude, +pl.longitude, loc.country)) {
           setPill('pillGeo', 'Geocoder: Zippopotam.us', 'ok');
-          return { lat: +pl.latitude, lon: +pl.longitude, label: `${pl['place name'] || ''}, ${pl['state abbreviation'] || ''} (${loc.postal})` };
+          return { lat: +pl.latitude, lon: +pl.longitude, label: `${pl['place name'] || ''}, ${pl['state abbreviation'] || ''} (${formattedPostal})` };
         }
       }
     } catch {}
 
-    // Try Nominatim postal lookup
-    const tries = loc.country === 'ca'
-      ? [`${loc.postal.slice(0, 3)} ${loc.postal.slice(3)}`, loc.postal.slice(0, 3)]
-      : [loc.postal];
-    for (const pc of tries) {
+    // Try Nominatim 3-char FSA for Canada if Zippopotam missed it
+    if (loc.country === 'ca') {
       try {
-        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=${loc.country}&postalcode=${encodeURIComponent(pc)}`, { signal: timeoutSignal(6000) });
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=ca&postalcode=${encodeURIComponent(loc.postal.slice(0, 3))}`, { signal: timeoutSignal(5500) });
         const j = await r.json();
-        if (j?.[0]) {
-          setPill('pillGeo', 'Geocoder: Nominatim', 'ok');
+        if (j?.[0] && isWithinCountryBounds(+j[0].lat, +j[0].lon, 'ca')) {
+          setPill('pillGeo', 'Geocoder: Nominatim FSA', 'ok');
           return { lat: +j[0].lat, lon: +j[0].lon, label: j[0].display_name.split(',').slice(0, 2).join(', ') };
         }
       } catch {}
     }
 
-    // Try Photon (Komoot) geocoder
+    // Try Photon (Komoot) geocoder fallback
     try {
-      const q = `${loc.postal} ${loc.country === 'ca' ? 'Canada' : 'USA'}`;
-      const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1`, { signal: timeoutSignal(6000) });
+      const q = `${formattedPostal}, ${loc.country === 'ca' ? 'Canada' : 'United States'}`;
+      const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=3`, { signal: timeoutSignal(5500) });
       const j = await r.json();
-      const coords = j?.features?.[0]?.geometry?.coordinates;
-      if (coords) {
-        setPill('pillGeo', 'Geocoder: Photon API', 'ok');
-        return { lat: +coords[1], lon: +coords[0], label: loc.postal };
+      for (const f of (j?.features || [])) {
+        const [lon, lat] = f.geometry?.coordinates || [];
+        if (isWithinCountryBounds(lat, lon, loc.country)) {
+          setPill('pillGeo', 'Geocoder: Photon API', 'ok');
+          return { lat, lon, label: formattedPostal };
+        }
       }
     } catch {}
 
@@ -1405,33 +1531,118 @@
     return null;
   }
 
-  function expandAliases(merchantName) {
+  function findChainRule(merchantName) {
     const n = norm(merchantName);
-    const aliases = new Set([merchantName]);
-    for (const [k, list] of Object.entries(CHAIN_ALIASES)) {
-      if (n === k || n.includes(k) || k.includes(n)) {
-        list.forEach(a => aliases.add(a));
+    if (!n) return null;
+    for (const rule of CHAIN_RULES) {
+      for (const k of rule.keys) {
+        const nk = norm(k);
+        const re = new RegExp(`(?:^|\\s)${nk.replace(/\s+/g, '\\s+')}(?:$|\\s)`);
+        if (n === nk || re.test(n)) return rule;
       }
     }
-    return [...aliases];
+    return null;
   }
 
-  // API Source 1: Overpass QL Cluster (3 independent mirrors)
-  async function queryOverpass(names, home, radiusKm) {
-    const expanded = [...new Set(names.flatMap(expandAliases))];
-    const pat = expanded
-      .map(n => n.replace(/[^A-Za-z0-9\u00C0-\u024F]+/g, '.?').replace(/^\.\?|\.\?$/g, ''))
-      .filter(Boolean)
-      .join('|');
-    if (!pat) return [];
-    const around = `(around:${Math.round(radiusKm * 1000)},${home.lat.toFixed(5)},${home.lon.toFixed(5)})`;
-    const stmts = [];
-    for (const key of ['name', 'brand', 'operator']) {
-      for (const kind of ['["shop"]', '["amenity"="pharmacy"]', '["amenity"="marketplace"]']) {
-        stmts.push(`nwr${kind}["${key}"~"^(${pat})",i]${around};`);
+  function expandAliases(merchantName) {
+    const rule = findChainRule(merchantName);
+    if (rule) return [...new Set([merchantName, ...rule.aliases])];
+    return [merchantName];
+  }
+
+  function isOnlineOnlyMerchant(merchantName) {
+    const n = norm(merchantName);
+    return ONLINE_ONLY_MERCHANTS.has(n);
+  }
+
+  // Validates that an OSM / Photon / Nominatim element is an actual retail store or pharmacy
+  function isValidRetailPoi(tags, osmClass = '') {
+    if (!tags) return false;
+    if (osmClass && DISALLOWED_OSM_CLASSES.has(osmClass)) return false;
+    for (const badClass of DISALLOWED_OSM_CLASSES) {
+      if (tags[badClass] && !tags.shop && tags.amenity !== 'pharmacy' && tags.amenity !== 'marketplace') {
+        return false;
       }
     }
-    const body = 'data=' + encodeURIComponent(`[out:json][timeout:20];(${stmts.join('')});out center tags;`);
+    const shop = (tags.shop || '').toLowerCase();
+    if (shop && DISALLOWED_SHOP_TYPES.has(shop)) return false;
+
+    const amenity = (tags.amenity || '').toLowerCase();
+    if (amenity && amenity !== 'pharmacy' && amenity !== 'marketplace' && !shop) return false;
+
+    return true;
+  }
+
+  // Returns match score (0 = no match, 100 = exact brand/name match, 85 = whole-word phrase match)
+  function scoreChainMatch(merchantName, el) {
+    if (!el || !isValidRetailPoi(el.tags, el.osmClass)) return 0;
+    const rule = findChainRule(merchantName);
+    const aliases = expandAliases(merchantName).map(norm).filter(Boolean);
+    if (!aliases.length) return 0;
+
+    const rawNames = [
+      el.tags?.brand,
+      el.tags?.name,
+      el.tags?.official_name,
+      el.tags?.short_name,
+      el.tags?.alt_name
+    ].filter(Boolean);
+    if (!rawNames.length) return 0;
+
+    const cands = rawNames.map(norm).filter(Boolean);
+    const combinedText = ' ' + cands.join(' ') + ' ';
+
+    // Check banner-specific negative keywords
+    if (rule && rule.exclude.length) {
+      for (const ex of rule.exclude) {
+        const nex = norm(ex);
+        if (nex && combinedText.includes(' ' + nex + ' ')) return 0;
+      }
+    }
+
+    let bestScore = 0;
+    for (const a of aliases) {
+      const reWord = new RegExp(`(?:^|\\s)${a.replace(/\s+/g, '\\s+')}(?:$|\\s)`);
+      for (const c of cands) {
+        if (c === a) {
+          bestScore = Math.max(bestScore, 100 + a.length);
+        } else if (reWord.test(c)) {
+          bestScore = Math.max(bestScore, 80 + a.length);
+        }
+      }
+    }
+    return bestScore;
+  }
+
+  function getBoundingBox(home, radiusKm) {
+    const dLat = radiusKm / 111.32;
+    const dLon = radiusKm / (111.32 * Math.max(0.1, Math.cos(home.lat * Math.PI / 180)));
+    return {
+      south: home.lat - dLat,
+      north: home.lat + dLat,
+      west: home.lon - dLon,
+      east: home.lon + dLon
+    };
+  }
+
+  // API Source 1: Overpass QL Cluster using fast [bbox:...] index
+  async function queryOverpass(names, home, radiusKm) {
+    const expanded = [...new Set(names.flatMap(expandAliases))]
+      .map(n => n.replace(/['’`]/g, '').replace(/[^A-Za-z0-9\u00C0-\u024F]+/g, '.?').replace(/^\.\?|\.\?$/g, ''))
+      .filter(s => s.length >= 2);
+    if (!expanded.length) return [];
+
+    const pat = expanded.join('|');
+    const b = getBoundingBox(home, radiusKm);
+    const bboxSetting = `[bbox:${b.south.toFixed(5)},${b.west.toFixed(5)},${b.north.toFixed(5)},${b.east.toFixed(5)}]`;
+
+    const stmts = [
+      `nwr["shop"]["name"~"(${pat})",i];`,
+      `nwr["shop"]["brand"~"(${pat})",i];`,
+      `nwr["amenity"~"^(pharmacy|marketplace)$"]["name"~"(${pat})",i];`,
+      `nwr["amenity"~"^(pharmacy|marketplace)$"]["brand"~"(${pat})",i];`
+    ];
+    const body = 'data=' + encodeURIComponent(`[out:json][timeout:18]${bboxSetting};(${stmts.join('')});out center tags;`);
 
     for (const url of OVERPASS_ENDPOINTS) {
       try {
@@ -1439,7 +1650,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body,
-          signal: timeoutSignal(18000)
+          signal: timeoutSignal(16000)
         });
         if (!r.ok) continue;
         const j = await r.json();
@@ -1451,43 +1662,54 @@
               tags: e.tags || {},
               source: 'Overpass'
             }))
-            .filter(e => Number.isFinite(e.lat) && Number.isFinite(e.lon));
+            .filter(e =>
+              Number.isFinite(e.lat) &&
+              Number.isFinite(e.lon) &&
+              hav(home, e) <= radiusKm &&
+              isValidRetailPoi(e.tags)
+            );
         }
       } catch {}
     }
     return [];
   }
 
-  // API Source 2: Photon Spatial POI Search (photon.komoot.io) for chains missed by Overpass
+  // API Source 2: Validated Photon Spatial POI Search (photon.komoot.io)
   async function queryPhotonForChain(chainName, home, radiusKm) {
     const searchTerms = expandAliases(chainName).slice(0, 2);
     const results = [];
-    const dLat = (radiusKm / 111.32);
-    const dLon = (radiusKm / (111.32 * Math.cos(home.lat * Math.PI / 180)));
-    const bbox = `${(home.lon - dLon).toFixed(4)},${(home.lat - dLat).toFixed(4)},${(home.lon + dLon).toFixed(4)},${(home.lat + dLat).toFixed(4)}`;
+    const b = getBoundingBox(home, radiusKm);
+    const bbox = `${b.west.toFixed(4)},${b.south.toFixed(4)},${b.east.toFixed(4)},${b.north.toFixed(4)}`;
 
     for (const term of searchTerms) {
       try {
-        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(term)}&lat=${home.lat.toFixed(5)}&lon=${home.lon.toFixed(5)}&bbox=${bbox}&limit=8`;
+        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(term)}&lat=${home.lat.toFixed(5)}&lon=${home.lon.toFixed(5)}&bbox=${bbox}&limit=12`;
         const r = await fetch(url, { signal: timeoutSignal(6500) });
         if (!r.ok) continue;
         const j = await r.json();
         for (const f of (j.features || [])) {
           const [lon, lat] = f.geometry?.coordinates || [];
           const p = f.properties || {};
-          if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-          const dist = hav(home, { lat, lon });
-          if (dist <= radiusKm * 1.15) {
-            results.push({
-              lat, lon,
-              tags: {
-                name: p.name || term,
-                'addr:housenumber': p.housenumber,
-                'addr:street': p.street,
-                'addr:city': p.city
-              },
-              source: 'Photon'
-            });
+          if (!Number.isFinite(lat) || !Number.isFinite(lon) || !p.name) continue;
+          if (hav(home, { lat, lon }) > radiusKm) continue;
+
+          const osmKey = (p.osm_key || '').toLowerCase();
+          const osmVal = (p.osm_value || '').toLowerCase();
+          const el = {
+            lat, lon,
+            osmClass: osmKey,
+            tags: {
+              name: p.name,
+              shop: osmKey === 'shop' ? osmVal : undefined,
+              amenity: osmKey === 'amenity' ? osmVal : undefined,
+              'addr:housenumber': p.housenumber,
+              'addr:street': p.street,
+              'addr:city': p.city
+            },
+            source: 'Photon'
+          };
+          if (scoreChainMatch(chainName, el) > 0) {
+            results.push(el);
           }
         }
         if (results.length) break;
@@ -1496,28 +1718,43 @@
     return results;
   }
 
-  // API Source 3: Nominatim Bounded Viewbox Search for any still-missing top chains
+  // API Source 3: Validated Nominatim Bounded Viewbox Search
   async function queryNominatimForChain(chainName, home, radiusKm) {
     const term = expandAliases(chainName)[0];
-    const dLat = (radiusKm / 111.32);
-    const dLon = (radiusKm / (111.32 * Math.cos(home.lat * Math.PI / 180)));
-    const viewbox = `${(home.lon - dLon).toFixed(4)},${(home.lat + dLat).toFixed(4)},${(home.lon + dLon).toFixed(4)},${(home.lat - dLat).toFixed(4)}`;
+    const b = getBoundingBox(home, radiusKm);
+    const viewbox = `${b.west.toFixed(4)},${b.north.toFixed(4)},${b.east.toFixed(4)},${b.south.toFixed(4)}`;
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(term)}&viewbox=${viewbox}&bounded=1&addressdetails=1&limit=6`;
+      const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(term)}&viewbox=${viewbox}&bounded=1&addressdetails=1&limit=10`;
       const r = await fetch(url, { signal: timeoutSignal(6500) });
       if (!r.ok) return [];
       const j = await r.json();
-      return (j || []).map(item => ({
-        lat: +item.lat,
-        lon: +item.lon,
-        tags: {
-          name: item.name || term,
-          'addr:housenumber': item.address?.house_number,
-          'addr:street': item.address?.road,
-          'addr:city': item.address?.city || item.address?.town || item.address?.suburb
-        },
-        source: 'Nominatim'
-      })).filter(e => Number.isFinite(e.lat) && Number.isFinite(e.lon) && hav(home, e) <= radiusKm * 1.15);
+      const out = [];
+      for (const item of (j || [])) {
+        const lat = +item.lat, lon = +item.lon;
+        const rawName = item.name || item.display_name?.split(',')[0] || '';
+        if (!rawName || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        if (hav(home, { lat, lon }) > radiusKm) continue;
+
+        const osmClass = (item.category || item.class || '').toLowerCase();
+        const osmType = (item.type || '').toLowerCase();
+        const el = {
+          lat, lon,
+          osmClass,
+          tags: {
+            name: rawName,
+            shop: osmClass === 'shop' ? osmType : undefined,
+            amenity: osmClass === 'amenity' ? osmType : undefined,
+            'addr:housenumber': item.address?.house_number,
+            'addr:street': item.address?.road,
+            'addr:city': item.address?.city || item.address?.town || item.address?.suburb
+          },
+          source: 'Nominatim'
+        };
+        if (scoreChainMatch(chainName, el) > 0) {
+          out.push(el);
+        }
+      }
+      return out;
     } catch {
       return [];
     }
@@ -1554,6 +1791,7 @@
     const m = new Map();
     for (const r of results) {
       for (const [name, o] of r.byStore) {
+        if (isOnlineOnlyMerchant(name)) continue;
         const s = m.get(name) || { name, count: 0, value: 0 };
         s.count++;
         if (r.regular) s.value += Math.max(0, r.regular.cost - o.cost);
@@ -1561,12 +1799,6 @@
       }
     }
     return [...m.values()].sort((a, b) => b.value - a.value || b.count - a.count);
-  }
-
-  function chainMatchesElement(merchantName, el) {
-    const aliases = expandAliases(merchantName).map(norm).filter(Boolean);
-    const cands = [norm(el.tags?.name), norm(el.tags?.brand), norm(el.tags?.operator)].filter(Boolean);
-    return aliases.some(a => cands.some(c => c === a || c.startsWith(a + ' ') || a.startsWith(c + ' ') || c.includes(a)));
   }
 
   function dedupeLocations(locs, home, chainName) {
@@ -1594,9 +1826,9 @@
     const byChain = new Map();
     merchants.forEach(m => byChain.set(m.name, []));
 
-    // 1. Seed any coordinates already extracted from Flipp API metadata
+    // 1. Seed verified street-address coordinates extracted from Flipp API metadata
     for (const m of merchants) {
-      const flippLocs = (flippStoreCoords.get(m.name) || []).filter(p => hav(home, p) <= radiusKm * 1.2);
+      const flippLocs = (flippStoreCoords.get(m.name) || []).filter(p => hav(home, p) <= radiusKm);
       if (flippLocs.length) {
         byChain.get(m.name).push(...flippLocs);
         sourcesUsed.add('Flipp');
@@ -1609,14 +1841,20 @@
     if (osmElements.length) sourcesUsed.add('Overpass');
 
     for (const el of osmElements) {
-      let bestM = null, bestLen = 0;
+      let bestScore = 0;
+      let matchedMerchants = [];
       for (const m of merchants) {
-        if (chainMatchesElement(m.name, el)) {
-          const l = norm(m.name).length;
-          if (l > bestLen) { bestM = m; bestLen = l; }
+        const sc = scoreChainMatch(m.name, el);
+        if (sc > bestScore) {
+          bestScore = sc;
+          matchedMerchants = [m];
+        } else if (sc > 0 && sc === bestScore) {
+          matchedMerchants.push(m);
         }
       }
-      if (bestM) byChain.get(bestM.name).push(el);
+      for (const m of matchedMerchants) {
+        byChain.get(m.name).push(el);
+      }
     }
 
     // 3. For any merchant with 0 branches found yet, query Photon Spatial POI API in parallel
@@ -1670,7 +1908,7 @@
     return { home, chains, D, road, provider, sourcesUsed: [...sourcesUsed] };
   }
 
-  // ---------- Route Planning (TSP + Branch Refinement + Stop/Time Constraints) ----------
+  // ---------- Route Planning (TSP + Co-Located Branch Refinement + Stop Pruning) ----------
   function bestOrder(nodes, D) {
     let best = { order: [], dist: Infinity };
     const used = Array(nodes.length).fill(false), cur = [];
@@ -1690,15 +1928,6 @@
       }
     })(0, 0);
     return best;
-  }
-
-  function evaluate(S, sel, picks) {
-    const route = bestOrder(picks.map(p => p.idx), S.geo.D);
-    const groceries = S.priced.reduce((s, r) => s + Math.min(...sel.map(c => itemAt(r, c.name).cost)), 0);
-    const gas = route.dist * S.gasKm;
-    const hours = (route.dist / AVG_CITY_SPEED_KMH) + (sel.length * STOP_OVERHEAD_HOURS);
-    const timeCost = hours * (S.timeVal || 0);
-    return { sel, picks, route, groceries, gas, timeCost, hours, dist: route.dist, total: groceries + gas + timeCost };
   }
 
   function refine(S, plan) {
@@ -1726,24 +1955,50 @@
     return { ...plan, picks, route, gas, timeCost, hours, dist: route.dist, total: plan.groceries + gas + timeCost };
   }
 
+  function evaluate(S, sel) {
+    const initialPicks = sel.map(c => c.locs[0]);
+    const route = bestOrder(initialPicks.map(p => p.idx), S.geo.D);
+    const groceries = S.priced.reduce((s, r) => s + Math.min(...sel.map(c => itemAt(r, c.name).cost)), 0);
+    const gas = route.dist * S.gasKm;
+    const hours = (route.dist / AVG_CITY_SPEED_KMH) + (sel.length * STOP_OVERHEAD_HOURS);
+    const timeCost = hours * (S.timeVal || 0);
+    return refine(S, { sel, picks: initialPicks, route, groceries, gas, timeCost, hours, dist: route.dist, total: groceries + gas + timeCost });
+  }
+
+  // Ensures every store in a multi-stop plan actually contributes at least one assigned item
+  function everyStopHasItems(S, plan) {
+    if (plan.sel.length <= 1) return true;
+    const buckets = assignItems(S, plan);
+    return buckets.every(b => b.items.length > 0);
+  }
+
   function buildPlans(S) {
-    const cands = S.geo.chains.slice(0, MAX_CHAINS), all = [];
+    // Guarantee the physically closest chain is always in the candidate pool
+    const sortedByDist = [...S.geo.chains].sort((a, b) => a.locs[0].dist - b.locs[0].dist);
+    const nearestChain = sortedByDist[0];
+    const cands = S.geo.chains.slice(0, MAX_CHAINS);
+    if (nearestChain && !cands.includes(nearestChain)) {
+      cands[cands.length - 1] = nearestChain;
+    }
+
+    const all = [];
     const maxStops = S.maxStops || 3;
     for (let mask = 1; mask < (1 << cands.length); mask++) {
       const sel = cands.filter((_, i) => mask & (1 << i));
       if (sel.length > maxStops) continue;
-      all.push(evaluate(S, sel, sel.map(c => c.locs[0])));
+      const plan = evaluate(S, sel);
+      if (everyStopHasItems(S, plan)) {
+        all.push(plan);
+      }
     }
     if (!all.length) return null;
+
     const best = [...all].sort((a, b) => a.total - b.total)[0];
     const minG = Math.min(...all.map(p => p.groceries));
     const maxSave = all.filter(p => p.groceries <= minG + 0.005).sort((a, b) => a.dist - b.dist)[0];
-    const nearest = all.filter(p => p.sel.length === 1).sort((a, b) => a.dist - b.dist)[0];
-    return {
-      best: refine(S, best),
-      maxSave: refine(S, maxSave),
-      nearest: refine(S, nearest)
-    };
+    const nearest = evaluate(S, [nearestChain]);
+
+    return { best, maxSave, nearest };
   }
 
   const orderedStops = p => p.route.order.map(id => p.picks.find(x => x.idx === id));
@@ -1847,8 +2102,16 @@
         tripKm, tripGas: tripKm != null ? tripKm * S.gasKm : null
       };
     }).filter(s => s.saleN > 0);
-    const key = s => s.total + (S.geo ? (s.tripGas ?? Infinity) : 0);
-    return out.sort((a, b) => key(a) - key(b));
+
+    return out.sort((a, b) => {
+      if (S.geo) {
+        const aHas = a.tripGas != null;
+        const bHas = b.tripGas != null;
+        if (aHas !== bHas) return aHas ? -1 : 1;
+        if (aHas && bHas) return (a.total + a.tripGas) - (b.total + b.tripGas);
+      }
+      return a.total - b.total;
+    });
   }
 
   function storeCard(s, S) {
@@ -1874,7 +2137,7 @@
     return `<details class="card">
       <summary>
         <strong>${esc(s.name)}</strong>
-        <span class="muted">${s.near ? fmtDist(s.near.dist) + ' away (' + esc(s.near.source) + ')' : 'location not found'} · ${s.saleN} of ${n} on sale</span>
+        <span class="muted">${s.near ? fmtDist(s.near.dist) + ' away (' + esc(s.near.source) + ')' : 'no branch within radius'} · ${s.saleN} of ${n} on sale</span>
         <span class="sum-total">${money(s.total)}</span>
       </summary>
       ${s.near ? `<div class="muted" style="margin-top:8px">Nearest branch: <strong>${esc(s.near.label)}</strong> · <a href="${mapsLink(s.near)}" target="_blank" rel="noopener">Open in Maps ↗</a>
@@ -1983,6 +2246,18 @@
       <p class="muted">Try a simpler term (e.g. "butter" instead of "unsalted butter 454g") or untick strict matching.</p></div>`;
   }
 
+  function applyViewTab(v) {
+    activeView = v;
+    els.viewTabs.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === v);
+    });
+    els.summary.style.display = (v === 'all') ? '' : 'none';
+    els.checklistSection.style.display = (v === 'checklist' || v === 'all') ? '' : 'none';
+    const sb = $('storesBlock'), ib = $('itemsBlock');
+    if (sb) sb.style.display = (v === 'all' || v === 'stores') ? '' : 'none';
+    if (ib) ib.style.display = (v === 'all' || v === 'items') ? '' : 'none';
+  }
+
   function render(S) {
     lastState = S;
     const { results } = S;
@@ -2049,7 +2324,6 @@
       ${S.plans ? `<p class="muted" style="margin-top:10px">Gas is calculated at ${money(perDist)} per ${S.loc.country === 'us' ? 'mile' : 'km'}. Store locations were verified across <strong>${esc(S.geo.sourcesUsed.join(', '))}</strong> and routed via <strong>${esc(S.geo.provider)}</strong>. Click any route card above to preview it on the map and update your checklist.</p>` : ''}
       ${routeHtml}`;
 
-    // Bind interactive plan switching
     els.summary.querySelectorAll('.card.selectable').forEach(card => {
       card.addEventListener('click', () => {
         S.activePlanKey = card.dataset.plan;
@@ -2076,20 +2350,15 @@
           </div>`).join('')}
         ${renderMissing(missing)}
       </div>`;
+
+    applyViewTab(activeView);
   }
 
   // ---------- View Tab Filtering ----------
   els.viewTabs.addEventListener('click', e => {
     const btn = e.target.closest('button[data-view]');
     if (!btn) return;
-    els.viewTabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const v = btn.dataset.view;
-    els.summary.style.display = (v === 'all') ? '' : 'none';
-    els.checklistSection.style.display = (v === 'checklist' || v === 'all') ? '' : 'none';
-    const sb = $('storesBlock'), ib = $('itemsBlock');
-    if (sb) sb.style.display = (v === 'all' || v === 'stores') ? '' : 'none';
-    if (ib) ib.style.display = (v === 'all' || v === 'items') ? '' : 'none';
+    applyViewTab(btn.dataset.view);
   });
 
   // ---------- Export & Copy Actions ----------
@@ -2098,7 +2367,8 @@
     const plan = lastState.plans?.[lastState.activePlanKey || 'best'];
     const lines = [`🛒 CHEAPEST NEAR ME SHOPPING PLAN (${lastState.loc.postal})`];
     if (plan) {
-      lines.push(`Total: ${money(plan.total)} (Groceries ${money(plan.groceries)} + Gas ${money(plan.gas)} · ${fmtDist(plan.dist)})`);
+      const timeStr = plan.timeCost > 0.01 ? ` + Time ${money(plan.timeCost)}` : '';
+      lines.push(`Total: ${money(plan.total)} (Groceries ${money(plan.groceries)} + Gas ${money(plan.gas)}${timeStr} · ${fmtDist(plan.dist)})`);
       for (const b of assignItems(lastState, plan)) {
         lines.push(`\n📍 ${b.stop.chain} — ${b.stop.label} (${fmtDist(b.stop.dist)})`);
         for (const { r, a } of b.items) {
@@ -2134,6 +2404,8 @@
   // ---------- Main Execution Pipeline ----------
   els.go.addEventListener('click', async () => {
     if (editorMode === 'visual') syncBuilderToTextarea();
+    else syncTextareaToBuilder();
+
     const loc = parsePostal(els.postal.value);
     if (!loc) return setStatus('Enter a valid 5-digit US ZIP code or 6-character Canadian postal code.', true, 0);
 
