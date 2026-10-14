@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#059669" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10b981" media="(prefers-color-scheme: dark)">
 <title>Cheapest Near Me Pro – Multi-API Flyer & Route Optimizer</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -215,12 +217,19 @@
     cursor: pointer;
     user-select: none;
     transition: all 0.12s;
+    font-weight: 500;
   }
   .chip:hover {
     border-color: var(--accent);
     background: var(--accent-bg);
     color: var(--accent);
   }
+  .chip.off {
+    opacity: 0.5;
+    text-decoration: line-through;
+    border-style: dashed;
+  }
+  .chip.off:hover { border-color: var(--err); color: var(--err); background: var(--err-bg); }
   .mode-tabs {
     display: flex;
     gap: 4px;
@@ -363,6 +372,20 @@
     vertical-align: middle;
   }
 
+  /* Leaflet popup controls (popup surface is always light) */
+  .leaflet-popup-content .pop-btn {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 7px 12px;
+    border-radius: 7px;
+    border: 1px solid #cbd5e1;
+    background: #f1f5f9;
+    color: #0f172a;
+    font: 600 12.5px system-ui, sans-serif;
+    cursor: pointer;
+  }
+  .leaflet-popup-content .pop-btn:hover { background: #e2e8f0; border-color: #94a3b8; }
+
   /* Navigation Tabs for Results */
   .view-tabs {
     display: flex;
@@ -371,6 +394,7 @@
     border-bottom: 1px solid var(--border);
     padding-bottom: 10px;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .view-tabs button {
     background: var(--card);
@@ -378,6 +402,7 @@
     border: 1px solid var(--border);
     padding: 8px 14px;
     font-size: 0.9rem;
+    white-space: nowrap;
   }
   .view-tabs button.active {
     background: var(--accent);
@@ -450,6 +475,10 @@
     border: 1px dashed var(--border);
     color: var(--muted);
   }
+  .tag.warn-tag {
+    background: var(--amber-bg);
+    color: var(--amber);
+  }
   .pu { font-weight: 600; font-size: 0.81rem; color: var(--text); }
   .warn { color: var(--err); }
   .est { color: var(--muted); font-style: italic; }
@@ -484,6 +513,39 @@
     width: 18px;
     height: 18px;
     cursor: pointer;
+    flex: 0 0 auto;
+  }
+
+  /* Toast notifications */
+  #toastWrap {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    pointer-events: none;
+    width: max-content;
+    max-width: calc(100vw - 24px);
+  }
+  .toast {
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--accent-border);
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+    animation: toastIn 0.18s ease-out;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   footer {
@@ -493,8 +555,29 @@
     font-size: 0.8rem;
     color: var(--muted);
   }
+
+  /* Mobile hardening */
+  @media (max-width: 700px) {
+    main { padding: 14px 12px 90px; }
+    .header-inner { padding: 10px 12px; }
+    .brand h1 { font-size: 1.02rem; }
+    .sub { font-size: 0.72rem; }
+    #map { height: 300px; }
+    .builder-row { grid-template-columns: 1fr 1fr; }
+    .builder-row .b-name { grid-column: 1 / -1; }
+    .row.compact label { flex: 1 1 45%; }
+    button { min-height: 40px; }
+    button.sm { min-height: 34px; }
+    .chip { padding: 6px 12px; }
+    .check-item { padding: 11px 10px; }
+    .num { font-size: 1.5rem; }
+    /* 16px inputs prevent unwanted iOS Safari auto-zoom */
+    input[type=text], input[type=number], select, textarea { font-size: 16px; }
+    .view-tabs button { padding: 8px 11px; font-size: 0.84rem; }
+  }
+
   @media print {
-    header.app-header, .top-grid, .view-tabs, .no-print { display: none !important; }
+    header.app-header, .top-grid, .view-tabs, .no-print, #toastWrap { display: none !important; }
     body { background: #fff; color: #000; }
     .card { box-shadow: none; border: 1px solid #ccc; page-break-inside: avoid; }
   }
@@ -508,13 +591,14 @@
       <span style="font-size:1.5rem">🛒</span>
       <div>
         <h1>Cheapest Near Me <span class="badge-pro">Pro Multi-API</span></h1>
-        <div class="sub" style="font-size:0.78rem">Live Weekly Flyers · Multi-API Store Locator · True Road-Network Route Optimizer</div>
+        <div class="sub" style="font-size:0.78rem">Live Weekly Flyers · Verified Store Locations · Road-Network Route Optimizer</div>
       </div>
     </div>
     <div class="header-actions">
-      <button id="btnSample" type="button" class="secondary sm">✨ Load Sample List</button>
-      <button id="btnCopyTrip" type="button" class="secondary sm" style="display:none">📋 Copy Checklist</button>
-      <button id="btnCsv" type="button" class="secondary sm" style="display:none">⬇️ Export CSV</button>
+      <button id="btnSample" type="button" class="secondary sm">✨ Sample</button>
+      <button id="btnShare" type="button" class="secondary sm">🔗 Copy Link</button>
+      <button id="btnCopyTrip" type="button" class="secondary sm" style="display:none">📋 Checklist</button>
+      <button id="btnCsv" type="button" class="secondary sm" style="display:none">⬇️ CSV</button>
       <button id="btnPrint" type="button" class="secondary sm" style="display:none" onclick="window.print()">🖨️ Print</button>
     </div>
   </div>
@@ -626,9 +710,10 @@
       <div class="map-toolbar">
         <div>
           <strong style="font-size:0.95rem">🗺️ Live Store &amp; Route Map</strong>
-          <div class="muted" id="mapSub">Multi-API store pins &amp; road-network route will appear here</div>
+          <div class="muted" id="mapSub">Verified store pins &amp; road-network route will appear here</div>
         </div>
-        <div style="display:flex; gap:6px;">
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" id="btnResetExcluded" class="secondary sm" style="display:none">↩️ Reset excluded (0)</button>
           <button type="button" id="btnFitMap" class="secondary sm">Fit Bounds</button>
         </div>
       </div>
@@ -636,7 +721,8 @@
       <div class="map-legend">
         <span><i class="dot" style="background:#2563eb"></i>Your Location</span>
         <span><i class="dot" style="background:#059669"></i>Active Route Stop</span>
-        <span><i class="dot" style="background:#64748b"></i>Other Nearby Flyer Store</span>
+        <span><i class="dot" style="background:#64748b"></i>Other Nearby Store</span>
+        <span><i class="dot" style="background:#dc2626"></i>Excluded / Untrusted</span>
         <span style="margin-left:auto" id="roadBadge"></span>
       </div>
     </section>
@@ -655,10 +741,13 @@
   <section id="details"></section>
 
   <footer>
-    <strong>Multi-API Architecture:</strong> Live flyer pricing via Flipp (`backflipp.wishabi.com`). Postal &amp; GPS geocoding via <strong>Nominatim (OpenStreetMap)</strong>, <strong>Photon (Komoot)</strong>, and <strong>Zippopotam.us</strong>. Physical store branch discovery combines <strong>Flipp Store Metadata</strong>, a <strong>3-mirror Overpass QL cluster</strong> (`overpass-api.de`, `kumi.systems`, `mail.ru`), <strong>Photon Spatial POI Search</strong> (`photon.komoot.io`), and <strong>Nominatim Bounded Search</strong> with strict retail POI validation. Driving distance matrices and turn-by-turn road geometry use <strong>OSRM</strong> (`router.project-osrm.org`) and <strong>FOSSGIS OSRM</strong> (`routing.openstreetmap.de`).<br>
+    <strong>Multi-API Architecture:</strong> Live flyer pricing via Flipp (<code>backflipp.wishabi.com</code>). Postal &amp; GPS geocoding via <strong>Nominatim (OpenStreetMap)</strong>, <strong>Photon (Komoot)</strong>, and <strong>Zippopotam.us</strong>. Physical store branch discovery combines <strong>Flipp Store Metadata</strong>, a <strong>3-mirror Overpass QL cluster</strong> (<code>overpass-api.de</code>, <code>kumi.systems</code>, <code>mail.ru</code>), <strong>Photon Spatial POI Search</strong> (<code>photon.komoot.io</code>), and <strong>Nominatim Bounded Search</strong> with strict retail POI validation.<br>
+    <strong>Location trust engine:</strong> self-reported store coordinates are cross-verified against OpenStreetMap, area-centroid leaks are detected and discarded, and remaining unverified pins are reverse-address-checked via Photon. Any branch can be excluded from routing directly on the map or in store cards; exclusions are remembered per postal code. Driving distance matrices and turn-by-turn road geometry use <strong>OSRM</strong> (<code>router.project-osrm.org</code>) and <strong>FOSSGIS OSRM</strong> (<code>routing.openstreetmap.de</code>).<br>
     Unofficial tool; not affiliated with Flipp or any retail chain. Always verify in-store unit sizes, loyalty card requirements, and quantity limits.
   </footer>
 </main>
+
+<div id="toastWrap" aria-live="polite"></div>
 
 <script>
 (() => {
@@ -684,11 +773,13 @@
   const KM_PER_MI = 1.609344;
   const ASSUMED_MARKUP = 1.2;
   const MAX_CHAINS = 8;
-  const LOCS_PER_CHAIN = 4;
+  const LOCS_PER_CHAIN = 5;
   const MAX_MERCHANTS = 18;
   const LOOKUPS_PER_ITEM = 5;
   const STOP_OVERHEAD_HOURS = 0.22; // ~13 mins parking/checkout per store stop when time-value > 0
   const AVG_CITY_SPEED_KMH = 42;
+  const VERIFY_REVERSE_LIMIT = 12;  // max Photon reverse lookups for unverified Flipp pins
+  const CENTROID_DUP_THRESHOLD = 3; // >=3 distinct Flipp addresses at one point => area centroid, discard
 
   // Non-physical / online-only / manufacturer coupon portals on Flipp that have no retail grocery branches
   const ONLINE_ONLY_MERCHANTS = new Set([
@@ -800,7 +891,7 @@
     fuel: $('fuel'), eff: $('eff'), radius: $('radius'), maxStops: $('maxStops'), timeVal: $('timeVal'),
     builderList: $('builderList'), visualWrap: $('visualWrap'), rawWrap: $('rawWrap'),
     tabVisual: $('tabVisual'), tabRaw: $('tabRaw'), viewTabs: $('viewTabs'),
-    btnCopyTrip: $('btnCopyTrip'), btnCsv: $('btnCsv'), btnPrint: $('btnPrint')
+    btnCopyTrip: $('btnCopyTrip'), btnCsv: $('btnCsv'), btnPrint: $('btnPrint'), btnShare: $('btnShare')
   };
 
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -835,6 +926,42 @@
     els.status.className = isError ? 'error' : '';
     if (pct != null) els.progFill.style.width = Math.max(0, Math.min(100, pct)) + '%';
   }
+
+  // ---------- Toast notifications ----------
+  function toast(msg) {
+    const wrap = $('toastWrap');
+    if (!wrap) return;
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    wrap.appendChild(t);
+    setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; }, 2400);
+    setTimeout(() => t.remove(), 2800);
+  }
+
+  // ---------- URL-safe base64 helpers (shareable links) ----------
+  const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const b64d = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+
+  // ---------- Branch exclusion persistence (per postal code) ----------
+  const locKey = l => `${l.chain}|${l.lat.toFixed(5)}|${l.lon.toFixed(5)}`;
+  function getExcluded(postal) {
+    try { return new Set(JSON.parse(localStorage.getItem('fp.excl.' + postal) || '[]')); }
+    catch { return new Set(); }
+  }
+  function setExcluded(postal, set) {
+    try { localStorage.setItem('fp.excl.' + postal, JSON.stringify([...set])); } catch {}
+  }
+
+  // ---------- Location trust / confidence ----------
+  const isOsmSource = s => /Overpass|Photon|Nominatim/.test(s || '');
+  const confInfo = l => {
+    if (l.conf === 'verified') return { cls: 'tag src-tag', txt: '✓ verified (OSM)' };
+    if (l.conf === 'checked') return { cls: 'tag est', txt: '◦ address-checked' };
+    return { cls: 'tag warn-tag', txt: '⚠️ unverified' };
+  };
+  const confBadge = l => `<span class="${confInfo(l).cls}">${confInfo(l).txt}</span>`;
+  const confMark = l => l.conf === 'verified' ? '✓' : l.conf === 'checked' ? '◦' : '⚠';
 
   // ---------- Interactive Map Initialization ----------
   let map = null, mapLayerGroup = null, routeLineLayer = null;
@@ -894,9 +1021,9 @@
   }
 
   function updateMapForPlan(S, plan) {
-    if (!map || !S?.geo?.home) return;
+    if (!map || !S?.geo?.home || !S.geo.chainsAll) return;
     mapLayerGroup.clearLayers();
-    const { home, chains } = S.geo;
+    const { home, chainsAll } = S.geo;
     const allLatLngs = [[home.lat, home.lon]];
 
     L.marker([home.lat, home.lon], { icon: makePinIcon('#2563eb', '🏠') })
@@ -905,24 +1032,28 @@
 
     const activeStops = plan ? orderedStops(plan) : [];
     const activeSet = new Map();
-    activeStops.forEach((st, idx) => activeSet.set(`${st.chain}|${st.lat.toFixed(5)}|${st.lon.toFixed(5)}`, idx + 1));
+    activeStops.forEach((st, idx) => activeSet.set(locKey(st), idx + 1));
 
-    for (const c of chains) {
+    let total = 0, exclN = 0;
+    for (const c of chainsAll) {
       for (const loc of c.locs) {
-        const key = `${loc.chain}|${loc.lat.toFixed(5)}|${loc.lon.toFixed(5)}`;
+        total++;
+        const key = locKey(loc);
         const stopNum = activeSet.get(key);
         const isRoute = stopNum != null;
-        const pinColor = isRoute ? '#059669' : '#64748b';
-        const pinText = isRoute ? String(stopNum) : '•';
-        const m = L.marker([loc.lat, loc.lon], {
-          icon: makePinIcon(pinColor, pinText),
-          zIndexOffset: isRoute ? 500 : 0
-        });
+        let pinColor = '#64748b', pinText = '•', zOff = 0;
+        if (loc.excluded) { pinColor = '#dc2626'; pinText = '✕'; zOff = -100; exclN++; }
+        else if (isRoute) { pinColor = '#059669'; pinText = String(stopNum); zOff = 600; }
+        const m = L.marker([loc.lat, loc.lon], { icon: makePinIcon(pinColor, pinText), zIndexOffset: zOff });
         m.bindPopup(`
-          <strong>${esc(loc.chain)}</strong> ${isRoute ? `<span class="tag">Stop #${stopNum}</span>` : ''}<br>
-          <span class="muted">${esc(loc.label)}</span><br>
+          <strong>${esc(loc.chain)}</strong>
+          ${isRoute ? `<span style="background:#ecfdf5;color:#059669;border-radius:99px;padding:1px 8px;font-size:12px;font-weight:700">Stop #${stopNum}</span>` : ''}
+          ${loc.excluded ? '<span style="color:#dc2626;font-weight:700;font-size:12px">excluded</span>' : ''}<br>
+          <span style="color:#64748b">${esc(loc.label)}</span><br>
+          <span style="font-size:12px;color:#475569">${confInfo(loc).txt} · source: <code>${esc(loc.source)}</code></span><br>
           Distance from home: <strong>${fmtDist(loc.dist)}</strong><br>
-          Source: <code>${esc(loc.source || 'OSM')}</code> · <a href="${mapsLink(loc)}" target="_blank" rel="noopener">Google Maps ↗</a>
+          <a href="${mapsLink(loc)}" target="_blank" rel="noopener">Google Maps ↗</a><br>
+          <button type="button" class="pop-btn js-toggle-loc" data-key="${esc(key)}">${loc.excluded ? '✅ Re-include this branch' : '🚫 Exclude this branch'}</button>
         `);
         m.addTo(mapLayerGroup);
         allLatLngs.push([loc.lat, loc.lon]);
@@ -932,8 +1063,52 @@
     S.mapBounds = L.latLngBounds(allLatLngs);
     map.invalidateSize();
     map.fitBounds(S.mapBounds, { padding: [32, 32], maxZoom: 14 });
-    $('mapSub').textContent = `${chains.reduce((n, c) => n + c.locs.length, 0)} verified store branches mapped across ${chains.length} chains`;
+    $('mapSub').textContent = `${total} branches mapped (${exclN} excluded) across ${chainsAll.length} chains · tap a pin to exclude/untrust a wrong location`;
     drawRouteGeometry(home, activeStops);
+  }
+
+  // ---------- Branch exclusion controls (delegated: works in popups & cards) ----------
+  document.addEventListener('click', e => {
+    const b = e.target.closest('.js-toggle-loc');
+    if (!b || !lastState?.geo) return;
+    const key = b.dataset.key;
+    const set = getExcluded(lastState.loc.postal);
+    const wasExcluded = set.has(key);
+    if (wasExcluded) set.delete(key); else set.add(key);
+    setExcluded(lastState.loc.postal, set);
+    toast(wasExcluded ? '✅ Branch re-included — routes updated' : '🚫 Branch excluded — routes updated');
+    applyExclusions(lastState);
+  });
+
+  $('btnResetExcluded').addEventListener('click', () => {
+    if (!lastState?.geo) return;
+    setExcluded(lastState.loc.postal, new Set());
+    toast('↩️ All excluded branches re-enabled');
+    applyExclusions(lastState);
+  });
+
+  // Re-derives active chains from chainsAll + exclusion set, re-optimizes, re-renders.
+  function applyExclusions(S) {
+    if (!S?.geo?.chainsAll) return;
+    const set = getExcluded(S.loc.postal);
+    for (const c of S.geo.chainsAll) {
+      c.locs.forEach(l => { l.excluded = set.has(locKey(l)); });
+    }
+    S.geo.chains = S.geo.chainsAll
+      .map(c => ({ ...c, locs: c.locs.filter(l => !l.excluded) }))
+      .filter(c => c.locs.length);
+
+    if (S.geoError && S.geoError.startsWith('All discovered branches')) S.geoError = '';
+    if (!S.geo.chains.length) {
+      S.geoError = 'All discovered branches are currently excluded. Re-enable them from the map popups or the branch lists in store cards.';
+      S.plans = null;
+    } else if (S.priced.length) {
+      try { S.plans = buildPlans(S); }
+      catch (e) { S.geoError = 'Route optimization error: ' + e.message; S.plans = null; }
+    } else {
+      S.plans = null;
+    }
+    render(S);
   }
 
   // ---------- Visual Builder & List Synchronization ----------
@@ -962,7 +1137,7 @@
     row.innerHTML = `
       <input type="text" class="b-name" placeholder="Item (e.g. milk)" value="${esc(name)}">
       <input type="text" class="b-size" placeholder="Size (e.g. 2 L)" value="${esc(size)}">
-      <input type="text" class="b-price" placeholder="Usual $ (e.g. 4.99)" value="${esc(price.replace(/^\$\s*/, ''))}">
+      <input type="text" class="b-price" placeholder="Usual $ (e.g. 4.99)" value="${esc(price.replace(/^\$\s*/, ''))}" inputmode="decimal">
       <button type="button" class="del" title="Remove item">✕</button>
     `;
     row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncBuilderToTextarea));
@@ -1053,12 +1228,36 @@
     setStatus('Loaded sample shopping list. Click "Find Cheapest Deals & Nearest Stores" to run.');
   });
 
-  // ---------- Persistence ----------
+  // ---------- Persistence & shareable-link import ----------
   els.postal.value = localStorage.getItem('fp.postal') || '';
   els.list.value = localStorage.getItem('fp.list') || '';
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem('fp.settings') || '{}'); } catch {}
+  // Shared link (#p=<postal>&l=<base64url list>) takes priority over local storage
+  try {
+    const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const hp = h.get('p'), hl = h.get('l');
+    if (hp) els.postal.value = hp;
+    if (hl) els.list.value = b64d(hl);
+  } catch {}
   syncTextareaToBuilder();
+
+  // ---------- Shareable link export ----------
+  els.btnShare.addEventListener('click', async () => {
+    if (editorMode === 'visual') syncBuilderToTextarea();
+    else syncTextareaToBuilder();
+    const postal = els.postal.value.trim();
+    const list = els.list.value.trim();
+    if (!postal && !list) return toast('Nothing to share yet — add a postal code or items');
+    const hash = 'p=' + encodeURIComponent(postal) + (list ? '&l=' + b64e(list) : '');
+    try { history.replaceState(null, '', '#' + hash); } catch { location.hash = hash; }
+    try {
+      await navigator.clipboard.writeText(location.href);
+      toast('🔗 Link with your list copied to clipboard');
+    } catch {
+      toast('🔗 Share link is now in your address bar');
+    }
+  });
 
   // ---------- Location / Country-specific settings ----------
   function parsePostal(raw) {
@@ -1222,8 +1421,9 @@
     return o;
   }
 
-  // Registry of verified physical store coordinates discovered inside Flipp responses.
-  // Only records coordinates when accompanied by an explicit street address (prevents regional centroids).
+  // Registry of self-reported store coordinates discovered inside Flipp responses.
+  // Records are only trusted after downstream OSM cross-verification; we also track
+  // "centroid leaks" (many different street addresses mapped to one identical point).
   const flippStoreCoords = new Map();
 
   function recordFlippCoords(merchant, obj) {
@@ -1232,14 +1432,21 @@
     if (!street || street.length < 4 || !/\d/.test(street)) return;
     const lat = parseFloat(obj.latitude ?? obj.lat ?? obj.store_latitude);
     const lon = parseFloat(obj.longitude ?? obj.lng ?? obj.lon ?? obj.store_longitude);
-    if (Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) > 1 && Math.abs(lon) > 1) {
-      const addr = [street, obj.city].filter(Boolean).join(', ');
-      if (!flippStoreCoords.has(merchant)) flippStoreCoords.set(merchant, []);
-      const list = flippStoreCoords.get(merchant);
-      if (!list.some(x => Math.hypot(x.lat - lat, x.lon - lon) < 0.002)) {
-        list.push({ lat, lon, label: addr, source: 'Flipp', tags: { name: merchant, shop: 'supermarket' } });
-      }
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    // Plausibility guards: reject (0,0), null-island jitter and non-North-America coords
+    if (Math.abs(lat) < 1 || Math.abs(lon) < 1) return;
+    if (!(lat >= 18 && lat <= 72 && lon >= -179 && lon <= -52)) return;
+
+    const addr = [street, obj.city].filter(Boolean).join(', ');
+    if (!flippStoreCoords.has(merchant)) flippStoreCoords.set(merchant, []);
+    const list = flippStoreCoords.get(merchant);
+    const near = list.find(x => Math.hypot(x.lat - lat, x.lon - lon) < 0.002);
+    if (near) {
+      // Same point, different street address => merchant/city centroid leak, count it
+      if (near.street && street && near.street !== street) near.dupCount = (near.dupCount || 1) + 1;
+      return;
     }
+    list.push({ lat, lon, label: addr, street, dupCount: 1, source: 'Flipp', tags: { name: merchant, shop: 'supermarket' } });
   }
 
   function normalize(raw) {
@@ -1760,6 +1967,29 @@
     }
   }
 
+  // Reverse-address verification for self-reported (Flipp) coordinates:
+  // confirms a retail POI actually exists within ~150 m of the claimed point.
+  async function photonVerify(loc) {
+    try {
+      const r = await fetch(`https://photon.komoot.io/reverse?lon=${loc.lon.toFixed(6)}&lat=${loc.lat.toFixed(6)}&limit=1`, { signal: timeoutSignal(5000) });
+      if (!r.ok) return false;
+      const j = await r.json();
+      const f = j?.features?.[0];
+      if (!f) return false;
+      const [lon, lat] = f.geometry?.coordinates || [];
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+      if (hav(loc, { lat, lon }) > 0.15) return false;
+      const key = (f.properties?.osm_key || '').toLowerCase();
+      const val = (f.properties?.osm_value || '').toLowerCase();
+      if (DISALLOWED_SHOP_TYPES.has(val)) return false;
+      if (key === 'shop' || key === 'amenity') {
+        if (f.properties?.name) loc.verifyName = f.properties.name;
+        return true;
+      }
+      return false;
+    } catch { return false; }
+  }
+
   // Multi-Engine Road Matrix (OSRM Primary + FOSSGIS OSRM Secondary + Haversine Winding Fallback)
   async function roadMatrix(points) {
     if (points.length <= 1) return { D: [[0]], road: true, provider: 'OSRM' };
@@ -1801,16 +2031,26 @@
     return [...m.values()].sort((a, b) => b.value - a.value || b.count - a.count);
   }
 
+  // Dedupe branches from different APIs. When a self-reported (Flipp) pin collides with a
+  // community-verified OSM pin, the OSM coordinates win — flyer sites are frequently stale/wrong.
   function dedupeLocations(locs, home, chainName) {
     const sorted = locs
       .map(e => ({ ...e, chain: chainName, label: locLabel(e), d: hav(home, e) }))
       .sort((a, b) => a.d - b.d);
     const kept = [];
     for (const loc of sorted) {
-      // Merge duplicate pins from different APIs within 180 meters of each other
       const dup = kept.find(k => hav(k, loc) < 0.18);
       if (dup) {
-        if (!dup.source.includes(loc.source)) dup.source += `+${loc.source}`;
+        const dupIsSelfReported = /Flipp/.test(dup.source) && !isOsmSource(dup.source);
+        if (dupIsSelfReported && isOsmSource(loc.source)) {
+          // Trust community-verified OSM coordinates over self-reported ones
+          dup.lat = loc.lat; dup.lon = loc.lon; dup.tags = loc.tags;
+          dup.source = loc.source + '+Flipp';
+          dup.d = hav(home, dup);
+          dup.osmVerified = true;
+        } else if (!dup.source.includes(loc.source)) {
+          dup.source += `+${loc.source}`;
+        }
         if (dup.label.length < loc.label.length) dup.label = loc.label;
       } else {
         kept.push(loc);
@@ -1820,15 +2060,18 @@
     return kept;
   }
 
-  async function locateStoresMultiApi(home, merchants, radiusKm) {
+  async function locateStoresMultiApi(home, merchants, radiusKm, postal) {
     if (!home) throw new Error('Could not resolve coordinates for that postal code.');
     const sourcesUsed = new Set();
     const byChain = new Map();
     merchants.forEach(m => byChain.set(m.name, []));
 
-    // 1. Seed verified street-address coordinates extracted from Flipp API metadata
+    // 1. Seed self-reported street-address coordinates from Flipp API metadata.
+    //    Area-centroid leaks (many addresses mapped to one point) are discarded here.
     for (const m of merchants) {
-      const flippLocs = (flippStoreCoords.get(m.name) || []).filter(p => hav(home, p) <= radiusKm);
+      const flippLocs = (flippStoreCoords.get(m.name) || [])
+        .filter(p => (p.dupCount || 1) < CENTROID_DUP_THRESHOLD)
+        .filter(p => hav(home, p) <= radiusKm);
       if (flippLocs.length) {
         byChain.get(m.name).push(...flippLocs);
         sourcesUsed.add('Flipp');
@@ -1873,7 +2116,7 @@
     // 4. For any still-missing top merchants, query Nominatim Bounded Viewbox API
     const stillMissing = merchants.filter(m => byChain.get(m.name).length === 0).slice(0, 5);
     if (stillMissing.length) {
-      setStatus(`Querying Nominatim Viewbox API for ${stillMissing.length} remaining chains…`, false, 82);
+      setStatus(`Querying Nominatim Viewbox API for ${stillMissing.length} remaining chains…`, false, 80);
       await pool(stillMissing, 2, async m => {
         const nom = await queryNominatimForChain(m.name, home, radiusKm);
         if (nom.length) {
@@ -1890,12 +2133,42 @@
       if (locs.length) chains.push({ name: m.name, value: m.value, locs });
     }
 
+    // ---- Location trust verification pass ----
+    // OSM-sourced pins are 'verified'. Self-reported (Flipp) pins near an OSM pin of the
+    // same chain get upgraded to 'verified'; the rest get Photon reverse-address-checked.
+    setStatus('Cross-verifying store locations against OpenStreetMap…', false, 84);
+    const unverified = [];
+    for (const c of chains) {
+      const osmLocs = c.locs.filter(l => isOsmSource(l.source));
+      for (const l of c.locs) {
+        if (isOsmSource(l.source)) {
+          l.conf = 'verified';
+        } else if (osmLocs.some(o => hav(o, l) <= 0.35)) {
+          l.conf = 'verified';
+          if (!l.source.includes('OSM-nearby')) l.source += '+OSM-nearby';
+        } else {
+          unverified.push(l);
+        }
+      }
+    }
+    if (unverified.length) {
+      setStatus(`Reverse-checking ${Math.min(VERIFY_REVERSE_LIMIT, unverified.length)} self-reported store addresses…`, false, 86);
+      await pool(unverified.slice(0, VERIFY_REVERSE_LIMIT), 3, async l => {
+        l.conf = (await photonVerify(l)) ? 'checked' : 'unverified';
+      });
+      unverified.slice(VERIFY_REVERSE_LIMIT).forEach(l => { l.conf = 'unverified'; });
+    }
+
+    const verifiedN = chains.reduce((n, c) => n + c.locs.filter(l => l.conf === 'verified' || l.conf === 'checked').length, 0);
+    const totalN = chains.reduce((n, c) => n + c.locs.length, 0);
     if (chains.length) {
-      setPill('pillPoi', `Stores Found (${[...sourcesUsed].join(' + ')})`, 'ok');
+      setPill('pillPoi', `Stores Found (${[...sourcesUsed].join(' + ')}) · ${verifiedN}/${totalN} verified`, 'ok');
     } else {
       setPill('pillPoi', 'Stores: None in Radius', 'warn');
     }
 
+    // ---- Road distance matrix over ALL branches (incl. currently-excluded ones,
+    //      so toggling exclusions later never requires re-fetching) ----
     const flat = chains.flatMap(c => c.locs);
     flat.forEach((l, i) => { l.idx = i + 1; });
     setStatus('Computing driving distances across road network…', false, 90);
@@ -1905,7 +2178,16 @@
       c.locs.sort((a, b) => a.dist - b.dist);
     }
     $('roadBadge').textContent = `Distances: ${provider}`;
-    return { home, chains, D, road, provider, sourcesUsed: [...sourcesUsed] };
+
+    // ---- Apply user's saved branch exclusions ----
+    const excl = getExcluded(postal);
+    for (const c of chains) c.locs.forEach(l => { l.excluded = excl.has(locKey(l)); });
+    const chainsAll = chains;
+    const activeChains = chains
+      .map(c => ({ ...c, locs: c.locs.filter(l => !l.excluded) }))
+      .filter(c => c.locs.length);
+
+    return { home, chains: activeChains, chainsAll, D, road, provider, sourcesUsed: [...sourcesUsed] };
   }
 
   // ---------- Route Planning (TSP + Co-Located Branch Refinement + Stop Pruning) ----------
@@ -1973,6 +2255,7 @@
   }
 
   function buildPlans(S) {
+    if (!S.geo.chains.length) return null;
     // Guarantee the physically closest chain is always in the candidate pool
     const sortedByDist = [...S.geo.chains].sort((a, b) => a.locs[0].dist - b.locs[0].dist);
     const nearestChain = sortedByDist[0];
@@ -2092,8 +2375,10 @@
         if (a.kind === 'sale') { sale += a.cost; saleN++; } else { reg += a.cost; regN++; }
         return { r, a };
       });
-      const chain = S.geo?.chains.find(c => c.name === name) || null;
-      const near = chain ? chain.locs[0] : null;
+      // Use the master (unfiltered) chain list so excluded branches remain manageable in the UI,
+      // but only non-excluded branches qualify as the "nearest" for cost estimates.
+      const chain = S.geo?.chainsAll?.find(c => c.name === name) || null;
+      const near = chain ? (chain.locs.find(l => !l.excluded) || null) : null;
       const tripKm = near ? D[0][near.idx] + D[near.idx][0] : null;
       return {
         name, lines, sale, saleN, reg, regN,
@@ -2130,18 +2415,28 @@
         <td class="price est">≈ ${money(a.cost)}${estUnitHtml(r.ref, a.cost)}<div><span class="tag est">est. regular</span></div></td></tr>`;
     }).join('');
 
-    const branchesHtml = s.allLocs.length > 1
-      ? `<div class="muted" style="margin-top:4px">Other nearby branches: ${s.allLocs.slice(1).map(l => `${esc(l.label)} (${fmtDist(l.dist)})`).join(' · ')}</div>`
-      : '';
+    // Interactive branch manager: click a branch chip to exclude/re-include it from routing
+    const branchChips = s.allLocs.length ? `
+      <div style="margin-top:10px;">
+        <div class="muted" style="margin-bottom:6px;">Branches — tap to include/exclude from routing (<strong>✓</strong> verified · <strong>◦</strong> address-checked · <strong>⚠</strong> unverified${s.near ? ' · <strong>★</strong> nearest' : ''}):</div>
+        <div class="staples-bar" style="margin:0;">
+          ${s.allLocs.map(l => {
+            const k = locKey(l);
+            const star = (s.near && l === s.near) ? '★ ' : '';
+            return `<button type="button" class="chip js-toggle-loc ${l.excluded ? 'off' : ''}" data-key="${esc(k)}" title="${esc(l.label)} (${esc(l.source)})">${star}${fmtDist(l.dist)} ${confMark(l)}</button>`;
+          }).join('')}
+        </div>
+      </div>` : '';
 
     return `<details class="card">
       <summary>
         <strong>${esc(s.name)}</strong>
-        <span class="muted">${s.near ? fmtDist(s.near.dist) + ' away (' + esc(s.near.source) + ')' : 'no branch within radius'} · ${s.saleN} of ${n} on sale</span>
+        <span class="muted">${s.near ? fmtDist(s.near.dist) + ' away (' + esc(s.near.source) + ')' : 'no active branch — check excluded branches below'} · ${s.saleN} of ${n} on sale</span>
         <span class="sum-total">${money(s.total)}</span>
       </summary>
-      ${s.near ? `<div class="muted" style="margin-top:8px">Nearest branch: <strong>${esc(s.near.label)}</strong> · <a href="${mapsLink(s.near)}" target="_blank" rel="noopener">Open in Maps ↗</a>
-        · round trip ${fmtDist(s.tripKm)} ≈ ${money(s.tripGas)} gas → <strong>${money(s.total + s.tripGas)}</strong> all-in</div>${branchesHtml}` : ''}
+      ${s.near ? `<div class="muted" style="margin-top:8px">Nearest active branch: <strong>${esc(s.near.label)}</strong> ${confBadge(s.near)} · <a href="${mapsLink(s.near)}" target="_blank" rel="noopener">Open in Maps ↗</a>
+        · round trip ${fmtDist(s.tripKm)} ≈ ${money(s.tripGas)} gas → <strong>${money(s.total + s.tripGas)}</strong> all-in</div>` : ''}
+      ${branchChips}
       <table><tr><th>Item</th><th class="price">Flyer price</th><th class="price">Cost here</th></tr>${rows}</table>
       <p class="muted">On sale: ${money(s.sale)} (${s.saleN} item${s.saleN === 1 ? '' : 's'}) ·
         Not on sale, est. regular: ${money(s.reg)} (${s.regN} item${s.regN === 1 ? '' : 's'}) ·
@@ -2174,7 +2469,7 @@
   function routeCard(S, p, title) {
     const buckets = assignItems(S, p), L = legs(S, p);
     const rows = buckets.map((x, i) => `
-      <li><strong>${esc(x.stop.chain)}</strong> <span class="tag src-tag">${esc(x.stop.source)}</span>
+      <li><strong>${esc(x.stop.chain)}</strong> <span class="tag src-tag">${esc(x.stop.source)}</span> ${confBadge(x.stop)}
         <span class="muted">· ${fmtDist(L[i])} from ${i ? 'previous stop' : 'home'} · ${esc(x.stop.label)} · <a href="${mapsLink(x.stop)}" target="_blank" rel="noopener">map ↗</a></span>
         <div class="muted">Buy (${x.items.length}): ${x.items.length ? x.items.map(({ r, a }) =>
           `<strong>${esc(r.query)}</strong> (${a.kind === 'sale' ? money(a.cost) : '≈ ' + money(a.cost) + ' est.'})`).join(', ') : '—'}</div></li>`).join('');
@@ -2186,12 +2481,13 @@
         <a href="${routeLink(S, p)}" target="_blank" rel="noopener" class="chip" style="font-weight:700">🚗 Open Turn-by-Turn in Google Maps ↗</a>
       </div>
       ${S.geo.road ? '' : '<div class="muted warn" style="margin-top:6px">Driving matrix API was unreachable; using straight-line distance × 1.3.</div>'}
+      <div class="muted" style="margin-top:6px">Wrong location? Tap its pin on the map and exclude that branch — routes recalculate instantly.</div>
     </div>`;
   }
 
   function renderChecklist(S, plan) {
     if (!plan) {
-      els.checklistSection.innerHTML = `<div class="card">No route active.</div>`;
+      els.checklistSection.innerHTML = `<div class="card">No route active. ${S.geo ? 'All branches may be excluded — re-enable them from the map or store cards.' : ''}</div>`;
       return;
     }
     const buckets = assignItems(S, plan);
@@ -2203,7 +2499,7 @@
       ${buckets.map((b, idx) => `
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-            <h3>Stop #${idx + 1}: ${esc(b.stop.chain)} <span class="muted" style="font-weight:400">(${esc(b.stop.label)} · ${fmtDist(b.stop.dist)} from home)</span></h3>
+            <h3>Stop #${idx + 1}: ${esc(b.stop.chain)} <span class="muted" style="font-weight:400">(${esc(b.stop.label)} · ${fmtDist(b.stop.dist)} from home)</span> ${confBadge(b.stop)}</h3>
             <a href="${mapsLink(b.stop)}" target="_blank" rel="noopener">Directions ↗</a>
           </div>
           <div>
@@ -2264,6 +2560,12 @@
     const found = results.filter(r => r.offers.length);
     const missing = results.filter(r => !r.offers.length);
 
+    // Excluded-branch control state
+    const exclCount = S.geo ? S.geo.chainsAll.reduce((n, c) => n + c.locs.filter(l => l.excluded).length, 0) : 0;
+    const btnReset = $('btnResetExcluded');
+    btnReset.style.display = exclCount ? '' : 'none';
+    btnReset.textContent = `↩️ Reset excluded (${exclCount})`;
+
     if (!found.length) {
       els.summary.innerHTML = `<div class="card err-card">No priced flyer matches found this week. Try simpler item names or uncheck Strict word matching.</div>`;
       els.details.innerHTML = renderMissing(missing);
@@ -2308,11 +2610,15 @@
       routeHtml = routeCard(S, activePlan, 'Selected Route Itinerary & Shopping Breakdown');
       updateMapForPlan(S, activePlan);
       renderChecklist(S, activePlan);
-    } else if (S.stores.length) {
-      const top = S.stores[0];
-      cards.push(`<div class="card"><h3>Best Single Store (by basket)</h3>
-        <div class="num">${esc(top.name)}</div>
-        <div>${top.saleN} of ${S.priced.length} items on sale · ${money(top.total)}</div></div>`);
+    } else if (S.geo) {
+      if (S.stores.length) {
+        const top = S.stores[0];
+        cards.push(`<div class="card"><h3>Best Single Store (by basket)</h3>
+          <div class="num">${esc(top.name)}</div>
+          <div>${top.saleN} of ${S.priced.length} items on sale · ${money(top.total)}</div></div>`);
+      }
+      renderChecklist(S, null);
+      updateMapForPlan(S, null);
     }
 
     const perDist = S.gasKm * (S.loc.country === 'us' ? KM_PER_MI : 1);
@@ -2321,8 +2627,7 @@
       <h2>Trip Summary &amp; Optimal Routes</h2>
       <div class="cards">${cards.join('')}</div>
       ${notice}
-      ${S.plans ? `<p class="muted" style="margin-top:10px">Gas is calculated at ${money(perDist)} per ${S.loc.country === 'us' ? 'mile' : 'km'}. Store locations were verified across <strong>${esc(S.geo.sourcesUsed.join(', '))}</strong> and routed via <strong>${esc(S.geo.provider)}</strong>. Click any route card above to preview it on the map and update your checklist.</p>` : ''}
-      ${routeHtml}`;
+      ${S.plans ? `<p class="muted" style="margin-top:10px">Gas is calculated at ${money(perDist)} per ${S.loc.country === 'us' ? 'mile' : 'km'}. Store locations were verified across <strong>${esc(S.geo.sourcesUsed.join(', '))}</strong> and routed via <strong>${esc(S.geo.provider)}</strong>. Locations marked ⚠️ are self-reported by the flyer and unverified — if one is wrong, tap its map pin and exclude it. Click any route card above to preview it on the map and update your checklist.</p>` : ''}`;
 
     els.summary.querySelectorAll('.card.selectable').forEach(card => {
       card.addEventListener('click', () => {
@@ -2335,7 +2640,7 @@
     els.details.innerHTML =
       `<div id="storesBlock">
         <h2>Store-by-Store Basket Comparison</h2>
-        <p class="muted">Click any store to expand its full line-by-line basket and see all nearby branch addresses.</p>
+        <p class="muted">Click any store to expand its full line-by-line basket, manage branch exclusions, and see all nearby branch addresses.</p>
         ${shown.map(s => storeCard(s, S)).join('')}
         ${S.stores.length > shown.length ? `<p class="muted">Showing the top ${shown.length} of ${S.stores.length} stores.</p>` : ''}
       </div>
@@ -2376,20 +2681,26 @@
         }
       }
     }
-    await navigator.clipboard.writeText(lines.join('\n'));
-    setStatus('Shopping checklist copied to clipboard!', false, 100);
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      toast('📋 Shopping checklist copied to clipboard');
+      setStatus('Shopping checklist copied to clipboard!', false, 100);
+    } catch {
+      setStatus('Could not access the clipboard — select the checklist text manually.', true);
+    }
   });
 
   els.btnCsv.addEventListener('click', () => {
     if (!lastState) return;
-    const rows = [['Search Item', 'Store', 'Product Name', 'Flyer Price', 'Normalized Cost', 'Nearest Branch', 'Distance (km)']];
+    const rows = [['Search Item', 'Store', 'Product Name', 'Flyer Price', 'Normalized Cost', 'Nearest Branch', 'Branch Distance (km)', 'Branch Verified']];
     for (const r of lastState.results) {
       for (const o of r.offers) {
         const ch = lastState.geo?.chains.find(c => c.name === o.merchant);
         const near = ch?.locs?.[0];
         rows.push([
           r.query, o.merchant, o.name, o.price, o.cost?.toFixed(2) || '',
-          near ? near.label : '', near ? near.dist.toFixed(2) : ''
+          near ? near.label : '', near ? near.dist.toFixed(2) : '',
+          near ? (near.conf || '') : ''
         ]);
       }
     }
@@ -2399,6 +2710,7 @@
     a.href = URL.createObjectURL(blob);
     a.download = `flyer-deals-${lastState.loc.postal}.csv`;
     a.click();
+    toast('⬇️ CSV exported');
   });
 
   // ---------- Main Execution Pipeline ----------
@@ -2418,6 +2730,9 @@
     localStorage.setItem('fp.postal', els.postal.value);
     localStorage.setItem('fp.list', els.list.value);
     localStorage.setItem('fp.settings', JSON.stringify(saved));
+
+    // Update the shareable URL without polluting browser history
+    try { history.replaceState(null, '', '#p=' + encodeURIComponent(loc.postal) + '&l=' + b64e(els.list.value)); } catch {}
 
     money = n => new Intl.NumberFormat(loc.intl, { style: 'currency', currency: loc.currency }).format(n);
     moneyP = n => new Intl.NumberFormat(loc.intl, {
@@ -2467,15 +2782,17 @@
         try {
           const home = await homeP;
           const merchants = rankMerchants(results).slice(0, MAX_MERCHANTS);
-          S.geo = await locateStoresMultiApi(home, merchants, radiusKm);
-          if (!S.geo.chains.length) {
+          S.geo = await locateStoresMultiApi(home, merchants, radiusKm, loc.postal);
+          if (!S.geo.chainsAll.length) {
             S.geoError = `No physical branches for these flyer merchants were found within ${set.radius} ${loc.country === 'us' ? 'miles' : 'km'}. Try increasing your search radius.`;
             S.geo = null;
+          } else if (!S.geo.chains.length) {
+            S.geoError = 'All discovered branches are currently excluded. Re-enable them from the map popups or the branch lists in store cards.';
           }
         } catch (e) {
           S.geoError = e.message;
         }
-        if (S.geo && S.priced.length) {
+        if (S.geo && S.geo.chains.length && S.priced.length) {
           try { S.plans = buildPlans(S); } catch (e) { S.geoError = 'Route optimization error: ' + e.message; }
         }
       }
