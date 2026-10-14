@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheapest Near Me – Flyer Price Finder</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1c1f24; --muted:#6b7280; --accent:#0a7d3b; --accent-bg:#e7f6ed; --border:#e3e6ea; --err:#b42318; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14161a; --card:#1d2025; --text:#e8eaed; --muted:#9aa1ac; --accent:#4ade80; --accent-bg:#17301f; --border:#2b2f36; --err:#f87171; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { margin: 0 0 4px; } h2 { margin: 32px 0 12px; } h3 { margin: 0 0 8px; }
+  .sub, .muted { color: var(--muted); font-size: .9rem; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; margin-top:16px; }
+  label { display:block; font-weight:600; margin-bottom:12px; }
+  label.inline { font-weight:400; display:flex; gap:8px; align-items:flex-start; }
+  input[type=text], textarea { width:100%; padding:10px; margin-top:4px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font:inherit; }
+  .row { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+  .row label { flex:1 1 220px; margin-bottom:0; }
+  button { padding:10px 16px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  @media (prefers-color-scheme: dark) { button { color:#06210f; } }
+  button.secondary { background:transparent; color:var(--text); border:1px solid var(--border); }
+  button:disabled { opacity:.5; cursor:wait; }
+  #status { margin-top:12px; min-height:1.4em; color:var(--muted); }
+  #status.error { color:var(--err); }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+  .cards .card { margin-top:0; }
+  .num { font-size:1.9rem; font-weight:800; color:var(--accent); }
+  table { width:100%; border-collapse:collapse; }
+  td, th { padding:8px 6px; border-top:1px solid var(--border); text-align:left; vertical-align:top; }
+  th { font-size:.8rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; border-top:0; }
+  td.price { text-align:right; white-space:nowrap; font-weight:700; }
+  td.thumb { width:52px; } td.thumb img { width:44px; height:44px; object-fit:contain; border-radius:6px; background:#fff; }
+  tr.best td { background:var(--accent-bg); }
+  .tag { display:inline-block; margin-top:2px; padding:1px 8px; border-radius:99px; background:var(--accent-bg); color:var(--accent); font-size:.75rem; }
+  .warn { color:var(--err); }
+  footer { margin-top:40px; font-size:.8rem; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>🛒 Cheapest Near Me</h1>
+  <p class="sub">Paste your shopping list and compare this week's flyer prices at stores near you, powered by Flipp.</p>
+
+  <section class="card">
+    <div class="row">
+      <label>ZIP / postal code
+        <input type="text" id="postal" placeholder="45202 or M5V 2T6" autocomplete="postal-code">
+      </label>
+      <button id="locate" type="button" class="secondary">📍 Use my location</button>
+    </div>
+    <label style="margin-top:16px">Shopping list (one item per line)
+      <textarea id="list" rows="8" placeholder="milk&#10;eggs&#10;chicken breast&#10;bananas"></textarea>
+    </label>
+    <label class="inline">
+      <input type="checkbox" id="strict" checked>
+      <span>Strict matching: the product name must contain every word you typed (filters out things like "milk chocolate" when you search "milk")</span>
+    </label>
+    <button id="go" type="button">Find the cheapest</button>
+    <div id="status" role="status"></div>
+  </section>
+
+  <section id="summary"></section>
+  <section id="details"></section>
+
+  <footer>
+    Unofficial; not affiliated with Flipp. Prices come from weekly flyers and can vary by store, so
+    check size/unit and any conditions (loyalty card, limits) before you go.
+  </footer>
+</main>
+
+<script>
+(() => {
+  // Tries Flipp directly first; if the browser blocks it (CORS), falls back to the
+  // same-origin proxy provided by server.js at /flipp/...
+  const BASES = ['https://backflipp.wishabi.com/flipp', '/flipp'];
+  let baseIdx = 0;
+
+  const $ = id => document.getElementById(id);
+  const els = { postal:$('postal'), list:$('list'), strict:$('strict'), go:$('go'),
+                locate:$('locate'), status:$('status'), summary:$('summary'), details:$('details') };
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+  let money = n => '$' + n.toFixed(2);
+
+  // ---------- persistence ----------
+  els.postal.value = localStorage.getItem('fp.postal') || '';
+  els.list.value   = localStorage.getItem('fp.list')   || '';
+
+  function setStatus(msg, isError = false) {
+    els.status.textContent = msg;
+    els.status.className = isError ? 'error' : '';
+  }
+
+  // ---------- location ----------
+  function parsePostal(raw) {
+    const p = raw.trim().toUpperCase();
+    if (/^\d{5}(-\d{4})?$/.test(p))       return { postal:p.slice(0,5),        locale:'en-us', intl:'en-US', currency:'USD' };
+    if (/^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/.test(p)) return { postal:p.replace(/\s/g,''), locale:'en-ca', intl:'en-CA', currency:'CAD' };
+    return null;
+  }
+
+  els.locate.addEventListener('click', () => {
+    if (!navigator.geolocation) return setStatus('Geolocation isn’t available in this browser.', true);
+    setStatus('Finding your location…');
+    navigator.geolocation.getCurrentPosition(async pos => {
+      try {
+        const { latitude:lat, longitude:lon } = pos.coords;
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${lat}&lon=${lon}`);
+        const pc = (await r.json())?.address?.postcode;
+        if (!pc) throw new Error('no postcode');
+        els.postal.value = pc;
+        setStatus(`Using ${pc}.`);
+      } catch {
+        setStatus('Couldn’t work out your postal code. Please type it in.', true);
+      }
+    }, () => setStatus('Location permission denied. Please type your postal code.', true), { timeout: 10000 });
+  });
+
+  // ---------- Flipp API ----------
+  async function flippFetch(path, params) {
+    let lastErr;
+    for (let i = baseIdx; i < BASES.length; i++) {
+      try {
+        const res = await fetch(`${BASES[i]}${path}?${params}`);
+        if (!res.ok) throw new Error(`Flipp returned HTTP ${res.status}`);
+        const json = await res.json();
+        baseIdx = i;
+        return json;
+      } catch (e) {
+        lastErr = e;
+        if (i < BASES.length - 1) continue;      // try next base (e.g. proxy)
+      }
+    }
+    if (lastErr instanceof TypeError || lastErr instanceof SyntaxError) {
+      throw new Error('Browser blocked the request (likely CORS). Run server.js and open http://localhost:3000 instead.');
+    }
+    throw lastErr;
+  }
+
+  function normalize(raw) {
+    const price = parseFloat(raw.current_price);
+    const pre = (raw.pre_price_text || '').trim();
+    // "2/" or "2 for" in the pre-price text => multi-buy; price is for the bundle
+    const m = /^(\d+)\s*(?:\/|for)$/i.exec(pre);
+    const qty = m ? Math.max(1, +m[1]) : 1;
+    const img = raw.clean_image_url || raw.cutout_image_url || '';
+    return {
+      name: (raw.name || '').trim(),
+      merchant: raw.merchant_name || raw.merchant || 'Unknown store',
+      price: Number.isFinite(price) ? price : null,
+      qty,
+      unit: Number.isFinite(price) ? price / qty : null,   // effective per-item price
+      pre: qty > 1 ? '' : pre,
+      post: (raw.post_price_text || '').trim(),
+      story: (raw.sale_story || '').trim(),
+      validTo: raw.valid_to ? new Date(raw.valid_to) : null,
+      image: /^https:\/\//.test(img) ? img : ''
+    };
+  }
+
+  const stem = w => (w.length > 3 ? w.replace(/(ies|es|s)$/, m => m === 'ies' ? 'y' : '') : w);
+  function matches(query, name) {
+    const hay = name.toLowerCase();
+    return query.toLowerCase().split(/\s+/).filter(Boolean).every(w => hay.includes(stem(w)));
+  }
+
+  async function findOffers(query, loc, strict) {
+    const data = await flippFetch('/items/search',
+      new URLSearchParams({ q: query, postal_code: loc.postal, locale: loc.locale }));
+    const now = new Date(), seen = new Set();
+    return (data.items || [])
+      .map(normalize)
+      .filter(o => o.price > 0 && o.name && (!o.validTo || o.validTo >= now) && (!strict || matches(query, o.name)))
+      .filter(o => { const k = `${o.merchant}|${o.name}|${o.price}`; if (seen.has(k)) return false; seen.add(k); return true; })
+      .sort((a, b) => a.unit - b.unit);
+  }
+
+  async function pool(items, limit, fn) {
+    const out = new Array(items.length); let i = 0;
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (i < items.length) { const idx = i++; out[idx] = await fn(items[idx]); }
+    }));
+    return out;
+  }
+
+  // ---------- analysis ----------
+  function rankStores(found) {
+    const stores = new Map();
+    for (const r of found) {
+      const best = new Map();                         // cheapest offer per store for this item
+      for (const o of r.offers) if (!best.has(o.merchant)) best.set(o.merchant, o);  // offers are pre-sorted
+      for (const [m, o] of best) {
+        if (!stores.has(m)) stores.set(m, { name:m, items:[], total:0, extra:0 });
+        const s = stores.get(m);
+        s.items.push({ query:r.query, offer:o });
+        s.total += o.unit;
+        s.extra += o.unit - r.offers[0].unit;         // premium vs. cheapest anywhere
+      }
+    }
+    return [...stores.values()].sort((a, b) => b.items.length - a.items.length || a.total - b.total);
+  }
+
+  // ---------- rendering ----------
+  const fmtDate = d => d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+
+  function priceLabel(o) {
+    let s = o.qty > 1
+      ? `${o.qty} for ${money(o.price)}<div class="muted">≈ ${money(o.unit)} ea</div>`
+      : `${esc(o.pre)} ${money(o.price)} ${esc(o.post)}`;
+    return s.trim();
+  }
+
+  function offerRow(o, best) {
+    return `<tr class="${best ? 'best' : ''}">
+      <td class="thumb">${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</td>
+      <td><strong>${esc(o.merchant)}</strong>
+          <div class="muted">${esc(o.name)}</div>
+          ${o.story ? `<span class="tag">${esc(o.story)}</span>` : ''}</td>
+      <td class="price">${priceLabel(o)}
+          <div class="muted">${o.validTo ? 'thru ' + fmtDate(o.validTo) : ''}</div></td>
+    </tr>`;
+  }
+
+  function render(results, total) {
+    const found = results.filter(r => r.offers.length);
+    const missing = results.filter(r => !r.offers.length);
+
+    if (!found.length) {
+      els.summary.innerHTML = `<div class="card">No priced matches found this week. Try simpler words or turn off strict matching.</div>`;
+      els.details.innerHTML = renderMissing(missing);
+      return;
+    }
+
+    const stores = rankStores(found);
+    const top = stores[0];
+    const splitTotal = found.reduce((s, r) => s + r.offers[0].unit, 0);
+    const splitStores = [...new Set(found.map(r => r.offers[0].merchant))];
+    const topMissing = found.filter(r => !top.items.some(i => i.query === r.query)).map(r => r.query);
+
+    els.summary.innerHTML = `
+      <h2>Summary</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>Cheapest if you shop around</h3>
+          <div class="num">${money(splitTotal)}</div>
+          <div>${found.length} item${found.length === 1 ? '' : 's'} from ${splitStores.length} store${splitStores.length === 1 ? '' : 's'}:
+            ${splitStores.map(esc).join(', ')}</div>
+        </div>
+        <div class="card">
+          <h3>Best single stop</h3>
+          <div class="num">${esc(top.name)}</div>
+          <div>${top.items.length} of ${found.length} items · ${money(top.total)}
+            ${top.extra > 0.005 ? `<span class="muted">(+${money(top.extra)} vs. cheapest on those)</span>` : ''}</div>
+          ${topMissing.length ? `<div class="muted">Not on sale there: ${topMissing.map(esc).join(', ')}</div>` : ''}
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h3>Stores ranked</h3>
+        <table>
+          <tr><th>Store</th><th>Items covered</th><th style="text-align:right">Est. total</th></tr>
+          ${stores.slice(0, 8).map(s => `<tr>
+            <td><strong>${esc(s.name)}</strong></td>
+            <td>${s.items.length} / ${found.length}
+                <div class="muted">${s.items.map(i => esc(i.query)).join(', ')}</div></td>
+            <td class="price">${money(s.total)}</td></tr>`).join('')}
+        </table>
+        <p class="muted">Totals only include items found on sale at that store this week, so compare coverage and price together.</p>
+      </div>`;
+
+    els.details.innerHTML = `<h2>Item by item</h2>` +
+      results.filter(r => r.offers.length).map(r => `
+        <div class="card">
+          <h3>${esc(r.query)} <span class="muted">· ${r.offers.length} offer${r.offers.length === 1 ? '' : 's'}</span></h3>
+          <table>${r.offers.slice(0, 6).map((o, i) => offerRow(o, i === 0)).join('')}</table>
+        </div>`).join('') + renderMissing(missing);
+  }
+
+  function renderMissing(missing) {
+    if (!missing.length) return '';
+    return `<div class="card"><h3>No match this week</h3>${missing.map(r =>
+      `<div>${esc(r.query)} ${r.error ? `<span class="warn">– ${esc(r.error)}</span>` : ''}</div>`).join('')}
+      <p class="muted">Try a simpler term (e.g. "butter" instead of "unsalted butter 454g") or untick strict matching.</p></div>`;
+  }
+
+  // ---------- main ----------
+  els.go.addEventListener('click', async () => {
+    const loc = parsePostal(els.postal.value);
+    if (!loc) return setStatus('Enter a valid US ZIP code or Canadian postal code.', true);
+
+    const queries = [...new Set(els.list.value.split('\n').map(s => s.trim()).filter(Boolean))].slice(0, 40);
+    if (!queries.length) return setStatus('Add at least one item to your list.', true);
+
+    localStorage.setItem('fp.postal', els.postal.value);
+    localStorage.setItem('fp.list', els.list.value);
+    money = n => new Intl.NumberFormat(loc.intl, { style:'currency', currency:loc.currency }).format(n);
+
+    els.go.disabled = true;
+    els.summary.innerHTML = els.details.innerHTML = '';
+    let done = 0;
+    setStatus(`Checking 0 of ${queries.length}…`);
+
+    const results = await pool(queries, 3, async q => {
+      try   { return { query:q, offers: await findOffers(q, loc, els.strict.checked) }; }
+      catch (e) { return { query:q, offers:[], error:e.message }; }
+      finally   { setStatus(`Checking ${++done} of ${queries.length}…`); }
+    });
+
+    const errors = results.filter(r => r.error);
+    if (errors.length === results.length) setStatus(errors[0].error, true);
+    else setStatus(`Done. ${results.filter(r => r.offers.length).length} of ${queries.length} items found.`);
+    render(results, queries.length);
+    els.go.disabled = false;
+  });
+})();
+</script>
+</body>
+</html>
