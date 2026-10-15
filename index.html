@@ -1,16 +1,3 @@
-*Thinking...*
-
-> The user wants the full code with the Price Matrix feature integrated. I need to output the entire HTML file with all four edits applied:
-> 
-> 1. CSS additions for the matrix
-> 2. New tab button in viewTabs
-> 3. Updated applyViewTab
-> 4. New renderMatrixHtml function
-> 5. matrixBlock div in render()
-> 
-> Let me reproduce the full file carefully with these changes integrated. This is a long file (~2000 lines). I need to be careful to include everything exactly, plus the modifications.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2908,12 +2895,3 @@
 </script>
 </body>
 </html>
-```
-
-**Summary of changes integrated (5 edits):**
-
-1. **CSS** — new `table.matrix` styling block (sticky item column, `.best`/`.worst`/`.est` cell highlighting, scrollable `.matrix-wrap` container) placed after `tr.best td`.
-2. **HTML** — new `<button type="button" data-view="matrix">🧮 Price Matrix</button>` tab in `#viewTabs`.
-3. **JS** — `renderMatrixHtml(S)` function added after `renderChecklist`: builds the items × stores grid from the existing `itemAt()` cache and `S.stores` (so it stays consistent with store cards and respects branch exclusions), highlights per-row cheapest (green) / most expensive (red), marks estimated-regular cells with `≈` italics, shows per-store basket totals with a "cheapest" tag, and truncates to 14 store columns with a note.
-4. **JS** — `applyViewTab` now toggles the new `#matrixBlock` visibility (shown only in the dedicated matrix view).
-5. **JS** — `render()` appends `<div id="matrixBlock">${renderMatrixHtml(S)}</div>` to the details output, so it re-renders automatically on plan selection, tab clicks, and branch-exclusion changes.
